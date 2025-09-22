@@ -160,9 +160,10 @@ class WebsiteManager:
                         # This is a staging site - perform complete cleanup
                         staging_website = WPDelete.owner
 
-                        # Delete virtual host configurations before deleting records
-                        from plogical.vhost import vhost
-                        vhost.deleteVirtualHostConfigurations(staging_website.domain)
+                        # Use the same robust deletion method as regular websites
+                        execPath = "/usr/local/CyberCP/bin/python " + virtualHostUtilities.cyberPanel + "/plogical/virtualHostUtilities.py"
+                        execPath = execPath + " deleteVirtualHostConfigurations --virtualHostName " + staging_website.domain
+                        ProcessUtilities.popenExecutioner(execPath)
 
                         # Delete all staging records
                         staging_records.delete()  # Delete WPStaging records
@@ -239,8 +240,10 @@ class WebsiteManager:
                         staging_website = staging_wpsite.owner
 
                         # Delete the staging Websites record and all associated data BEFORE deleting DB records
-                        from plogical.vhost import vhost
-                        vhost.deleteVirtualHostConfigurations(staging_website.domain)
+                        # Use the same robust deletion method as regular websites
+                        execPath = "/usr/local/CyberCP/bin/python " + virtualHostUtilities.cyberPanel + "/plogical/virtualHostUtilities.py"
+                        execPath = execPath + " deleteVirtualHostConfigurations --virtualHostName " + staging_website.domain
+                        ProcessUtilities.popenExecutioner(execPath)
 
                         # Delete the WPStaging record
                         wstagingDelete.delete()
