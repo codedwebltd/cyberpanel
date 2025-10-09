@@ -996,9 +996,11 @@ def Main(cwd, mysql, distro, ent, serial=None, port="8090", ftp=None, dns=None, 
     except:
         pass
 
-    if distro == centos:
+    # For RHEL-based systems (CentOS, AlmaLinux, Rocky, etc.), generate a separate password
+    if distro in [centos, cent8, openeuler]:
         InstallCyberPanel.mysqlPassword = install_utils.generate_pass()
     else:
+        # For Ubuntu/Debian, use the same password as root
         InstallCyberPanel.mysqlPassword = InstallCyberPanel.mysql_Root_password
 
     installer = InstallCyberPanel("/usr/local/lsws/", cwd, distro, ent, serial, port, ftp, dns, publicip, remotemysql,
