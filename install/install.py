@@ -619,7 +619,8 @@ password="%s"
         logging.InstallLog.writeToFile("Generating secure environment configuration!")
 
         # Generate secure environment file instead of hardcoding passwords
-        self.generate_secure_env_file(mysqlPassword, password)
+        # Note: password = MySQL root password, mysqlPassword = CyberPanel DB password
+        self.generate_secure_env_file(password, mysqlPassword)
 
         logging.InstallLog.writeToFile("Environment configuration generated successfully!")
 
