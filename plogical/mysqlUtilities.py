@@ -330,7 +330,8 @@ password=%s
                     full_command = f"{dump_cmd} | gzip -c > {backup_file}"
                     result = ProcessUtilities.executioner(full_command, shell=True)
 
-                    if result != 0:
+                    # Verify backup file was created successfully
+                    if not os.path.exists(backup_file) or os.path.getsize(backup_file) == 0:
                         logging.CyberCPLogFileWriter.writeToFile(
                             f"Database: {databaseName} could not be backed up (compressed)! [createDatabaseBackup]"
                         )
