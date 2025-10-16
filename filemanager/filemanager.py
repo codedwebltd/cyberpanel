@@ -1068,13 +1068,7 @@ class FileManager:
         command = 'chown -R -P %s:%s /home/%s/public_html/.[^.]*' % (externalApp, externalApp, domainName)
         ProcessUtilities.executioner(command)
 
-        # Set public_html directory itself to user:nogroup with 750 permissions
-        command = 'chown %s:%s /home/%s/public_html' % (externalApp, groupName, domainName)
-        ProcessUtilities.executioner(command)
-
-        command = 'chmod 750 /home/%s/public_html' % (domainName)
-        ProcessUtilities.executioner(command)
-
+        # Process child domains first
         for childs in website.childdomains_set.all():
             command = 'ls -la %s' % childs.path
             result = ProcessUtilities.outputExecutioner(command)
@@ -1105,3 +1099,10 @@ class FileManager:
 
             command = 'chown %s:%s %s' % (externalApp, groupName, childs.path)
             ProcessUtilities.executioner(command)
+
+        # Set public_html directory itself to user:nogroup with 750 permissions (done at the end)
+        command = 'chown %s:%s /home/%s/public_html' % (externalApp, groupName, domainName)
+        ProcessUtilities.executioner(command)
+
+        command = 'chmod 750 /home/%s/public_html' % (domainName)
+        ProcessUtilities.executioner(command)
