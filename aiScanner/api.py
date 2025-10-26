@@ -1275,7 +1275,6 @@ def scanner_replace_file(request):
 
         # Clean up CyberPanel temp file
         try:
-            import os
             os.remove(cyberpanel_temp)
         except:
             pass
