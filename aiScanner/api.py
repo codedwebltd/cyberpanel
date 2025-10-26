@@ -1443,9 +1443,17 @@ def scanner_rename_file(request):
 
         # Create backup if requested
         if backup_before_rename:
-            backup_dir_name = f'{file_token.wp_path}/.ai-scanner-backups/{datetime.datetime.now().strftime("%Y-%m-%d")}'
+            wp_path_clean = file_token.wp_path.rstrip('/')
+            backup_dir_name = f'{wp_path_clean}/.ai-scanner-backups/{datetime.datetime.now().strftime("%Y-%m-%d")}'
             mkdir_cmd = f'mkdir -p "{backup_dir_name}"'
-            ProcessUtilities.executioner(mkdir_cmd, user=user)
+            mkdir_result = ProcessUtilities.executioner(mkdir_cmd, user=user)
+
+            # executioner returns 1 for success, 0 for failure
+            if mkdir_result != 1:
+                error_msg = f'Failed to create backup directory: {backup_dir_name}'
+                logging.writeToFile(f'[API] {error_msg}')
+                log_file_operation(scan_id, 'rename', old_path, False, error_msg, request=request)
+                return JsonResponse({'success': False, 'error': 'Failed to create backup directory', 'error_code': 'BACKUP_DIR_FAILED'}, status=500)
 
             timestamp = int(time.time())
             basename = os.path.basename(full_old_path)
@@ -1453,7 +1461,14 @@ def scanner_rename_file(request):
             backup_path = os.path.join(backup_dir_name, backup_filename)
 
             cp_cmd = f'cp "{full_old_path}" "{backup_path}"'
-            ProcessUtilities.executioner(cp_cmd, user=user)
+            cp_result = ProcessUtilities.executioner(cp_cmd, user=user)
+
+            # executioner returns 1 for success, 0 for failure
+            if cp_result != 1:
+                error_msg = f'Failed to backup file before rename'
+                logging.writeToFile(f'[API] {error_msg}, cp_result={cp_result}')
+                log_file_operation(scan_id, 'rename', old_path, False, error_msg, request=request)
+                return JsonResponse({'success': False, 'error': 'Failed to backup file before quarantine', 'error_code': 'BACKUP_FAILED'}, status=500)
 
         # Perform rename
         mv_cmd = f'mv "{full_old_path}" "{full_new_path}"'
@@ -1620,9 +1635,17 @@ def scanner_delete_file(request):
         backup_path = None
 
         # ALWAYS create backup before deletion
-        backup_dir_name = f'{file_token.wp_path}/.ai-scanner-backups/{datetime.datetime.now().strftime("%Y-%m-%d")}'
+        wp_path_clean = file_token.wp_path.rstrip('/')
+        backup_dir_name = f'{wp_path_clean}/.ai-scanner-backups/{datetime.datetime.now().strftime("%Y-%m-%d")}'
         mkdir_cmd = f'mkdir -p "{backup_dir_name}"'
-        ProcessUtilities.executioner(mkdir_cmd, user=user)
+        mkdir_result = ProcessUtilities.executioner(mkdir_cmd, user=user)
+
+        # executioner returns 1 for success, 0 for failure
+        if mkdir_result != 1:
+            error_msg = f'Failed to create backup directory: {backup_dir_name}'
+            logging.writeToFile(f'[API] {error_msg}')
+            log_file_operation(scan_id, 'delete', file_path, False, error_msg, request=request)
+            return JsonResponse({'success': False, 'error': 'Failed to create backup directory', 'error_code': 'BACKUP_DIR_FAILED'}, status=500)
 
         timestamp = int(time.time())
         basename = os.path.basename(full_path)
@@ -1634,7 +1657,9 @@ def scanner_delete_file(request):
 
         # executioner returns 1 for success, 0 for failure
         if cp_result != 1:
-            log_file_operation(scan_id, 'delete', file_path, False, 'Backup creation failed - deletion blocked', backup_path=backup_path, request=request)
+            error_msg = f'Failed to backup file before deletion'
+            logging.writeToFile(f'[API] {error_msg}, cp_result={cp_result}')
+            log_file_operation(scan_id, 'delete', file_path, False, error_msg, backup_path=backup_path, request=request)
             return JsonResponse({'success': False, 'error': 'Backup creation failed - deletion blocked', 'error_code': 'BACKUP_FAILED'}, status=500)
 
         # Delete file
