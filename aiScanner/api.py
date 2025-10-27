@@ -968,10 +968,11 @@ def scanner_backup_file(request):
             log_file_operation(scan_id, 'backup', file_path, False, error, request=request)
             return JsonResponse({'success': False, 'error': error}, status=401)
 
-        # Rate limiting
-        is_allowed, count = check_rate_limit(scan_id, 'backup-file', 100)
+        # Rate limiting - higher limits for API key authenticated requests (platform operations)
+        max_backups = 1000 if file_token.auth_type == 'api_key' else 100
+        is_allowed, count = check_rate_limit(scan_id, 'backup-file', max_backups)
         if not is_allowed:
-            return JsonResponse({'success': False, 'error': 'Rate limit exceeded (max 100 backups per scan)'}, status=429)
+            return JsonResponse({'success': False, 'error': f'Rate limit exceeded (max {max_backups} backups per scan)'}, status=429)
 
         # Security check and get full path
         try:
@@ -1115,10 +1116,11 @@ def scanner_get_file(request):
             log_file_operation(scan_id, 'read', file_path, False, error, request=request)
             return JsonResponse({'success': False, 'error': error}, status=401)
 
-        # Rate limiting
-        is_allowed, count = check_rate_limit(scan_id, 'get-file', 500)
+        # Rate limiting - higher limits for API key authenticated requests (platform operations)
+        max_reads = 5000 if file_token.auth_type == 'api_key' else 500
+        is_allowed, count = check_rate_limit(scan_id, 'get-file', max_reads)
         if not is_allowed:
-            return JsonResponse({'success': False, 'error': 'Rate limit exceeded (max 500 file reads per scan)'}, status=429)
+            return JsonResponse({'success': False, 'error': f'Rate limit exceeded (max {max_reads} file reads per scan)'}, status=429)
 
         # Security check and get full path
         try:
@@ -1289,10 +1291,11 @@ def scanner_replace_file(request):
             log_file_operation(scan_id, 'replace', file_path, False, error, request=request)
             return JsonResponse({'success': False, 'error': error}, status=401)
 
-        # Rate limiting
-        is_allowed, count = check_rate_limit(scan_id, 'replace-file', 100)
+        # Rate limiting - higher limits for API key authenticated requests (platform operations)
+        max_replacements = 1000 if file_token.auth_type == 'api_key' else 100
+        is_allowed, count = check_rate_limit(scan_id, 'replace-file', max_replacements)
         if not is_allowed:
-            return JsonResponse({'success': False, 'error': 'Rate limit exceeded (max 100 replacements per scan)'}, status=429)
+            return JsonResponse({'success': False, 'error': f'Rate limit exceeded (max {max_replacements} replacements per scan)'}, status=429)
 
         # Security check and get full path
         try:
@@ -1509,10 +1512,11 @@ def scanner_rename_file(request):
             log_file_operation(scan_id, 'rename', old_path, False, error, request=request)
             return JsonResponse({'success': False, 'error': error}, status=401)
 
-        # Rate limiting
-        is_allowed, count = check_rate_limit(scan_id, 'rename-file', 50)
+        # Rate limiting - higher limits for API key authenticated requests (platform operations)
+        max_renames = 500 if file_token.auth_type == 'api_key' else 50
+        is_allowed, count = check_rate_limit(scan_id, 'rename-file', max_renames)
         if not is_allowed:
-            return JsonResponse({'success': False, 'error': 'Rate limit exceeded (max 50 renames per scan)'}, status=429)
+            return JsonResponse({'success': False, 'error': f'Rate limit exceeded (max {max_renames} renames per scan)'}, status=429)
 
         # Security check for both paths
         try:
@@ -1682,10 +1686,11 @@ def scanner_delete_file(request):
             log_file_operation(scan_id, 'delete', file_path, False, error, request=request)
             return JsonResponse({'success': False, 'error': error}, status=401)
 
-        # Rate limiting
-        is_allowed, count = check_rate_limit(scan_id, 'delete-file', 50)
+        # Rate limiting - higher limits for API key authenticated requests (platform operations)
+        max_deletions = 500 if file_token.auth_type == 'api_key' else 50
+        is_allowed, count = check_rate_limit(scan_id, 'delete-file', max_deletions)
         if not is_allowed:
-            return JsonResponse({'success': False, 'error': 'Rate limit exceeded (max 50 deletions per scan)'}, status=429)
+            return JsonResponse({'success': False, 'error': f'Rate limit exceeded (max {max_deletions} deletions per scan)'}, status=429)
 
         # Security check and get full path
         try:
