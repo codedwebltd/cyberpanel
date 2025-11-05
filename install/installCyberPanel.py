@@ -254,7 +254,7 @@ class InstallCyberPanel:
 
             # URLs for custom binaries
             OLS_BINARY_URL = "https://cyberpanel.net/downloads/openlitespeed-phpconfig-x86_64"
-            MODULE_URL = "https://cyberpanel.net/downloads/cyberpanel_ols_x86_64.so"
+            MODULE_URL = "https://cyberpanel.net/cyberpanel_ols_x86_64.so"
             OLS_BINARY_PATH = "/usr/local/lsws/bin/openlitespeed"
             MODULE_PATH = "/usr/local/lsws/modules/cyberpanel_ols.so"
 
