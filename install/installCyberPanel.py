@@ -236,9 +236,12 @@ class InstallCyberPanel:
             # Check if file was downloaded successfully by verifying it exists and has reasonable size
             if os.path.exists(destination):
                 file_size = os.path.getsize(destination)
-                # Verify file size is reasonable (at least 1MB for a real binary)
-                if file_size > 1048576:  # 1MB
-                    InstallCyberPanel.stdOut(f"Downloaded successfully ({file_size / (1024*1024):.2f} MB)", 1)
+                # Verify file size is reasonable (at least 10KB to avoid error pages/empty files)
+                if file_size > 10240:  # 10KB
+                    if file_size > 1048576:  # 1MB
+                        InstallCyberPanel.stdOut(f"Downloaded successfully ({file_size / (1024*1024):.2f} MB)", 1)
+                    else:
+                        InstallCyberPanel.stdOut(f"Downloaded successfully ({file_size / 1024:.2f} KB)", 1)
                     return True
                 else:
                     InstallCyberPanel.stdOut(f"ERROR: Downloaded file too small ({file_size} bytes)", 1)
