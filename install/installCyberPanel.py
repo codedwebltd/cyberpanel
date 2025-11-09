@@ -370,7 +370,7 @@ class InstallCyberPanel:
 
             # Check library dependencies
             command = f'ldd {binary_path}'
-            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
             if result.returncode != 0:
                 InstallCyberPanel.stdOut("ERROR: Failed to check binary dependencies", 1)
@@ -386,7 +386,7 @@ class InstallCyberPanel:
 
             # Try to run the binary with -v to check if it can execute
             command = f'{binary_path} -v'
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=5)
 
             if result.returncode != 0:
                 InstallCyberPanel.stdOut("ERROR: Binary failed to execute", 1)
