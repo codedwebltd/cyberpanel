@@ -807,8 +807,8 @@ class Upgrade:
                 OLS_BINARY_URL = f"{BASE_URL}/rhel8/openlitespeed-phpconfig-x86_64-rhel8"
                 MODULE_URL = f"{BASE_URL}/rhel8/cyberpanel_ols_x86_64_rhel8.so"
             elif binary_suffix == 'rhel9':
-                OLS_BINARY_URL = f"{BASE_URL}/rhel9/openlitespeed-phpconfig-x86_64"
-                MODULE_URL = f"{BASE_URL}/rhel9/cyberpanel_ols_x86_64.so"
+                OLS_BINARY_URL = f"{BASE_URL}/rhel9/openlitespeed-phpconfig-x86_64-rhel"
+                MODULE_URL = f"{BASE_URL}/rhel9/cyberpanel_ols_x86_64_rhel.so"
             else:  # ubuntu
                 OLS_BINARY_URL = f"{BASE_URL}/ubuntu/openlitespeed-phpconfig-x86_64-ubuntu"
                 MODULE_URL = f"{BASE_URL}/ubuntu/cyberpanel_ols_x86_64_ubuntu.so"
