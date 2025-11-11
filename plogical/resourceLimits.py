@@ -34,6 +34,91 @@ class ResourceLimitsManager:
         """Initialize the resource limits manager"""
         self._initialized = False
 
+    def _check_rhel8_cgroups_v2(self):
+        """
+        Check if RHEL 8 family needs manual cgroups v2 enablement
+
+        RHEL 8, AlmaLinux 8, Rocky Linux 8, and CloudLinux 8 have cgroups v2
+        backported to kernel 4.18 but it's disabled by default.
+
+        Returns:
+            bool: True if cgroups v2 is available or not RHEL 8, False if needs enablement
+        """
+        try:
+            # Check if this is a RHEL 8 family system
+            redhat_release_paths = ['/etc/redhat-release', '/etc/system-release']
+            is_rhel8 = False
+            os_name = "Unknown"
+
+            for release_file in redhat_release_paths:
+                if os.path.exists(release_file):
+                    try:
+                        with open(release_file, 'r') as f:
+                            release_content = f.read().lower()
+                            os_name = release_content.strip()
+
+                            # Check for RHEL 8 family (RHEL, AlmaLinux, Rocky, CloudLinux, CentOS 8)
+                            if ('release 8' in release_content or
+                                'release 8.' in release_content):
+                                if any(distro in release_content for distro in
+                                      ['red hat', 'almalinux', 'rocky', 'cloudlinux', 'centos']):
+                                    is_rhel8 = True
+                                    break
+                    except:
+                        pass
+
+            if not is_rhel8:
+                # Not RHEL 8 family, no special handling needed
+                return True
+
+            # This is RHEL 8 family - check if cgroups v2 is actually enabled
+            logging.writeToFile(f"Detected RHEL 8 family system: {os_name}")
+
+            # Check if cgroups v2 is mounted (indicates it's enabled)
+            try:
+                result = subprocess.run(
+                    ['mount'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+
+                if 'cgroup2' in result.stdout:
+                    logging.writeToFile("cgroups v2 is enabled on RHEL 8 family system")
+                    return True
+                else:
+                    # cgroups v2 is not enabled - provide instructions
+                    logging.writeToFile("=" * 80)
+                    logging.writeToFile("RHEL 8 FAMILY: cgroups v2 MANUAL ENABLEMENT REQUIRED")
+                    logging.writeToFile("=" * 80)
+                    logging.writeToFile(f"System: {os_name}")
+                    logging.writeToFile(f"Kernel: {os.uname().release}")
+                    logging.writeToFile("")
+                    logging.writeToFile("RHEL 8, AlmaLinux 8, Rocky Linux 8, and CloudLinux 8 have cgroups v2")
+                    logging.writeToFile("backported but disabled by default. To enable, run these commands:")
+                    logging.writeToFile("")
+                    logging.writeToFile("1. Enable cgroups v2 in boot parameters:")
+                    logging.writeToFile("   grubby --update-kernel=ALL --args='systemd.unified_cgroup_hierarchy=1'")
+                    logging.writeToFile("")
+                    logging.writeToFile("2. Reboot the system:")
+                    logging.writeToFile("   reboot")
+                    logging.writeToFile("")
+                    logging.writeToFile("3. After reboot, verify cgroups v2 is enabled:")
+                    logging.writeToFile("   mount | grep cgroup2")
+                    logging.writeToFile("")
+                    logging.writeToFile("4. Then create websites with resource limits")
+                    logging.writeToFile("=" * 80)
+                    return False
+
+            except Exception as e:
+                logging.writeToFile(f"Error checking cgroups v2 mount status: {str(e)}")
+                return False
+
+        except Exception as e:
+            logging.writeToFile(f"Error checking RHEL 8 family status: {str(e)}")
+            # If we can't detect, assume it's OK and let the normal checks proceed
+            return True
+
     def _ensure_cgroups_enabled(self):
         """
         Ensure OpenLiteSpeed cgroups are enabled
@@ -46,9 +131,14 @@ class ResourceLimitsManager:
             return True
 
         try:
+            # Special check for RHEL 8 family systems
+            if not self._check_rhel8_cgroups_v2():
+                return False
+
             # Check kernel support first
             if not os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
                 logging.writeToFile("cgroups v2 not available on this system (requires kernel 5.2+)")
+                logging.writeToFile("For RHEL 8 family, see instructions above to enable cgroups v2")
                 return False
 
             # Check if lscgctl exists
@@ -406,10 +496,38 @@ class ResourceLimitsManager:
             'memory_controller': False,
             'cpu_controller': False,
             'io_controller': False,
-            'quota_tools': False
+            'quota_tools': False,
+            'rhel8_family': False,
+            'rhel8_needs_enablement': False,
+            'os_name': 'Unknown'
         }
 
         try:
+            # Check for RHEL 8 family
+            redhat_release_paths = ['/etc/redhat-release', '/etc/system-release']
+            for release_file in redhat_release_paths:
+                if os.path.exists(release_file):
+                    try:
+                        with open(release_file, 'r') as f:
+                            release_content = f.read()
+                            support['os_name'] = release_content.strip()
+
+                            # Check for RHEL 8 family
+                            if ('release 8' in release_content.lower() or
+                                'release 8.' in release_content.lower()):
+                                if any(distro in release_content.lower() for distro in
+                                      ['red hat', 'almalinux', 'rocky', 'cloudlinux', 'centos']):
+                                    support['rhel8_family'] = True
+
+                                    # Check if cgroups v2 is actually mounted
+                                    result = subprocess.run(['mount'], capture_output=True,
+                                                          text=True, timeout=5)
+                                    if 'cgroup2' not in result.stdout:
+                                        support['rhel8_needs_enablement'] = True
+                                    break
+                    except:
+                        pass
+
             # Check cgroups v2
             if os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
                 support['cgroups_v2'] = True
