@@ -1366,7 +1366,8 @@ app.controller('modSecRulesPack', function ($scope, $http, $timeout, $window) {
                 $scope.installationFailed = true;
                 $scope.installationSuccess = false;
 
-                getOWASPAndComodoStatus(false);
+                // Update toggle state immediately to reflect installation result
+                getOWASPAndComodoStatus(true);
 
             } else {
                 $scope.modsecLoading = true;
@@ -1379,6 +1380,9 @@ app.controller('modSecRulesPack', function ($scope, $http, $timeout, $window) {
                 $scope.installationSuccess = true;
 
                 $scope.errorMessage = response.data.error_message;
+
+                // Update toggle to reflect failed installation (will show OFF)
+                getOWASPAndComodoStatus(true);
             }
 
         }

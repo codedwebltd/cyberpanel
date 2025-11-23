@@ -405,6 +405,7 @@ modsecurity_rules_file /usr/local/lsws/conf/modsec/rules.conf
             command = 'mkdir -p /usr/local/lsws/conf/modsec'
             result = subprocess.call(shlex.split(command))
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to create modsec directory [setupOWASPRules]")
                 return 0
 
             if os.path.exists(pathToOWASFolderNew):
@@ -420,30 +421,35 @@ modsecurity_rules_file /usr/local/lsws/conf/modsec/rules.conf
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to download OWASP CRS from GitHub. Check internet connection. [setupOWASPRules]")
                 return 0
 
             command = "unzip -o /usr/local/lsws/conf/modsec/owasp.zip -d /usr/local/lsws/conf/modsec/"
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to extract OWASP CRS zip file. Ensure unzip is installed. [setupOWASPRules]")
                 return 0
 
             command = 'mv /usr/local/lsws/conf/modsec/coreruleset-3.3.2 /usr/local/lsws/conf/modsec/owasp-modsecurity-crs-3.0-master'
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to rename OWASP CRS directory. File may already exist. [setupOWASPRules]")
                 return 0
 
             command = 'mv %s/crs-setup.conf.example %s/crs-setup.conf' % (pathToOWASFolderNew, pathToOWASFolderNew)
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to setup crs-setup.conf configuration file. [setupOWASPRules]")
                 return 0
 
             command = 'mv %s/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example %s/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf' % (pathToOWASFolderNew, pathToOWASFolderNew)
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to setup REQUEST-900 exclusion rules. [setupOWASPRules]")
                 return 0
 
             command = 'mv %s/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example %s/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf' % (
@@ -451,6 +457,7 @@ modsecurity_rules_file /usr/local/lsws/conf/modsec/rules.conf
             result = subprocess.call(shlex.split(command))
 
             if result != 0:
+                logging.CyberCPLogFileWriter.writeToFile("Failed to setup RESPONSE-999 exclusion rules. [setupOWASPRules]")
                 return 0
 
             content = """include {pathToOWASFolderNew}/crs-setup.conf
