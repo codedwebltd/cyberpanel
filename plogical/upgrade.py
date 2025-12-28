@@ -733,25 +733,32 @@ class Upgrade:
             platform = Upgrade.detectPlatform()
             Upgrade.stdOut(f"Detected platform: {platform}", 0)
 
-            # Platform-specific URLs and checksums (OpenLiteSpeed v1.8.4.1 - v2.0.5 Static Build)
+            # Platform-specific URLs and checksums (OpenLiteSpeed v1.8.4.1 with PHPConfig + Header unset fix + Static Linking)
+            # Module Build Date: December 28, 2025 - v2.2.0 Brute Force with Progressive Throttle
             BINARY_CONFIGS = {
                 'rhel8': {
                     'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-rhel8-static',
                     'sha256': '6ce688a237615102cc1603ee1999b3cede0ff3482d31e1f65705e92396d34b3a',
-                    'module_url': None,  # RHEL 8 doesn't have module (use RHEL 9 if needed)
-                    'module_sha256': None
+                    'module_url': 'https://cyberpanel.net/binaries/rhel8/cyberpanel_ols.so',
+                    'module_sha256': '7c33d89c7fbcd3ed7b0422fee3f49b5e041713c2c2b7316a5774f6defa147572',
+                    'modsec_url': 'https://cyberpanel.net/mod_security-compatible-rhel8.so',
+                    'modsec_sha256': 'bbbf003bdc7979b98f09b640dffe2cbbe5f855427f41319e4c121403c05837b2'
                 },
                 'rhel9': {
                     'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-rhel9-static',
-                    'sha256': '90468fb38767505185013024678d9144ae13100d2355097657f58719d98fbbc4',
-                    'module_url': 'https://cyberpanel.net/cyberpanel_ols_x86_64_rhel.so',
-                    'module_sha256': '127227db81bcbebf80b225fc747b69cfcd4ad2f01cea486aa02d5c9ba6c18109'
+                    'sha256': '709093d99d5d3e789134c131893614968e17eefd9ade2200f811d9b076b2f02e',
+                    'module_url': 'https://cyberpanel.net/binaries/rhel9/cyberpanel_ols.so',
+                    'module_sha256': 'ae65337e2d13babc0c675bb4264d469daffa2efb7627c9bf39ac59e42e3ebede',
+                    'modsec_url': 'https://cyberpanel.net/mod_security-compatible-rhel.so',
+                    'modsec_sha256': '19deb2ffbaf1334cf4ce4d46d53f747a75b29e835bf5a01f91ebcc0c78e98629'
                 },
                 'ubuntu': {
                     'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-ubuntu-static',
                     'sha256': '89aaf66474e78cb3c1666784e0e7a417550bd317e6ab148201bdc318d36710cb',
-                    'module_url': 'https://cyberpanel.net/cyberpanel_ols_x86_64_ubuntu.so',
-                    'module_sha256': 'e7734f1e6226c2a0a8e00c1f6534ea9f577df9081b046736a774b1c52c28e7e5'
+                    'module_url': 'https://cyberpanel.net/binaries/ubuntu/cyberpanel_ols.so',
+                    'module_sha256': '62978ede1f174dd2885e5227a3d9cc463d0c27acd77cfc23743d7309ee0c54ea',
+                    'modsec_url': 'https://cyberpanel.net/mod_security-compatible-ubuntu.so',
+                    'modsec_sha256': 'ed02c813136720bd4b9de5925f6e41bdc8392e494d7740d035479aaca6d1e0cd'
                 }
             }
 
@@ -765,8 +772,11 @@ class Upgrade:
             OLS_BINARY_SHA256 = config['sha256']
             MODULE_URL = config['module_url']
             MODULE_SHA256 = config['module_sha256']
+            MODSEC_URL = config.get('modsec_url')
+            MODSEC_SHA256 = config.get('modsec_sha256')
             OLS_BINARY_PATH = "/usr/local/lsws/bin/openlitespeed"
             MODULE_PATH = "/usr/local/lsws/modules/cyberpanel_ols.so"
+            MODSEC_PATH = "/usr/local/lsws/modules/mod_security.so"
 
             # Create backup
             from datetime import datetime
@@ -778,12 +788,16 @@ class Upgrade:
                 if os.path.exists(OLS_BINARY_PATH):
                     shutil.copy2(OLS_BINARY_PATH, f"{backup_dir}/openlitespeed.backup")
                     Upgrade.stdOut(f"Backup created at: {backup_dir}", 0)
+                # Also backup existing ModSecurity if it exists
+                if os.path.exists(MODSEC_PATH):
+                    shutil.copy2(MODSEC_PATH, f"{backup_dir}/mod_security.so.backup")
             except Exception as e:
                 Upgrade.stdOut(f"WARNING: Could not create backup: {e}", 0)
 
             # Download binaries to temp location
             tmp_binary = "/tmp/openlitespeed-custom"
             tmp_module = "/tmp/cyberpanel_ols.so"
+            tmp_modsec = "/tmp/mod_security.so"
 
             Upgrade.stdOut("Downloading custom binaries...", 0)
 
@@ -803,6 +817,18 @@ class Upgrade:
                 module_downloaded = True
             else:
                 Upgrade.stdOut("Note: No CyberPanel module for this platform", 0)
+
+            # Download compatible ModSecurity if existing ModSecurity is installed
+            # This prevents ABI incompatibility crashes (Signal 11/SIGSEGV)
+            modsec_downloaded = False
+            if os.path.exists(MODSEC_PATH) and MODSEC_URL and MODSEC_SHA256:
+                Upgrade.stdOut("Existing ModSecurity detected - downloading compatible version...", 0)
+                if Upgrade.downloadCustomBinary(MODSEC_URL, tmp_modsec, MODSEC_SHA256):
+                    modsec_downloaded = True
+                else:
+                    Upgrade.stdOut("WARNING: Failed to download compatible ModSecurity", 0)
+                    Upgrade.stdOut("ModSecurity may crash due to ABI incompatibility", 0)
+                    Upgrade.stdOut("Consider manually updating ModSecurity after upgrade", 0)
 
             # Install OpenLiteSpeed binary
             Upgrade.stdOut("Installing custom binaries...", 0)
@@ -826,9 +852,49 @@ class Upgrade:
                     Upgrade.stdOut(f"ERROR: Failed to install module: {e}", 0)
                     return False
 
-            # Verify installation
+            # Install compatible ModSecurity (if downloaded)
+            if modsec_downloaded:
+                try:
+                    shutil.move(tmp_modsec, MODSEC_PATH)
+                    os.chmod(MODSEC_PATH, 0o644)
+                    Upgrade.stdOut("Installed compatible ModSecurity module", 0)
+                except Exception as e:
+                    Upgrade.stdOut(f"WARNING: Failed to install ModSecurity: {e}", 0)
+                    # Non-fatal, continue
+
+            # Verify installation - test binary before restart
             if os.path.exists(OLS_BINARY_PATH):
                 if not module_downloaded or os.path.exists(MODULE_PATH):
+                    # Test 1: Verify binary is executable and shows version
+                    Upgrade.stdOut("Verifying new binary...", 0)
+                    try:
+                        result = subprocess.run(
+                            [OLS_BINARY_PATH, '-v'],
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        if result.returncode != 0:
+                            raise Exception(f"Binary test failed with exit code {result.returncode}")
+
+                        # Extract version info
+                        version_output = result.stdout if result.stdout else result.stderr
+                        if 'LiteSpeed' in version_output or 'OpenLiteSpeed' in version_output:
+                            Upgrade.stdOut(f"Binary version check passed", 0)
+                        else:
+                            Upgrade.stdOut("WARNING: Could not verify binary version", 0)
+                    except subprocess.TimeoutExpired:
+                        Upgrade.stdOut("WARNING: Binary version check timed out", 0)
+                    except Exception as e:
+                        Upgrade.stdOut(f"ERROR: Binary verification failed: {e}", 0)
+                        # Auto-rollback
+                        Upgrade.stdOut("Initiating auto-rollback...", 0)
+                        if Upgrade.rollbackOLSBinary(backup_dir, OLS_BINARY_PATH, MODULE_PATH if module_downloaded else None):
+                            Upgrade.stdOut("Rollback completed successfully", 0)
+                        else:
+                            Upgrade.stdOut("WARNING: Rollback may have failed", 0)
+                        return False
+
                     Upgrade.stdOut("=" * 50, 0)
                     Upgrade.stdOut("Custom Binaries Installed Successfully", 0)
                     Upgrade.stdOut("Features enabled:", 0)
@@ -842,12 +908,59 @@ class Upgrade:
                     return True
 
             Upgrade.stdOut("ERROR: Installation verification failed", 0)
+            # Auto-rollback on verification failure
+            if Upgrade.rollbackOLSBinary(backup_dir, OLS_BINARY_PATH, MODULE_PATH if module_downloaded else None):
+                Upgrade.stdOut("Rollback completed successfully", 0)
             return False
 
         except Exception as msg:
             Upgrade.stdOut(f"ERROR: {msg} [installCustomOLSBinaries]", 0)
             Upgrade.stdOut("Continuing with standard OLS", 0)
             return True  # Non-fatal error, continue
+
+    @staticmethod
+    def rollbackOLSBinary(backup_dir, binary_path, module_path=None):
+        """Rollback OpenLiteSpeed binary to previous version from backup"""
+        try:
+            Upgrade.stdOut("Rolling back to previous binary...", 0)
+
+            backup_binary = os.path.join(backup_dir, "openlitespeed.backup")
+
+            if os.path.exists(backup_binary):
+                # Stop OLS before rollback
+                Upgrade.stdOut("Stopping OpenLiteSpeed for rollback...", 0)
+                subprocess.run(['/usr/local/lsws/bin/lswsctrl', 'stop'],
+                             capture_output=True, timeout=30)
+
+                # Restore binary
+                shutil.copy2(backup_binary, binary_path)
+                os.chmod(binary_path, 0o755)
+                Upgrade.stdOut(f"Restored binary from {backup_binary}", 0)
+
+                # Start OLS after rollback
+                Upgrade.stdOut("Starting OpenLiteSpeed after rollback...", 0)
+                result = subprocess.run(['/usr/local/lsws/bin/lswsctrl', 'start'],
+                                       capture_output=True, timeout=30)
+
+                # Verify OLS started
+                import time
+                time.sleep(3)
+
+                result = subprocess.run(['pgrep', '-f', 'openlitespeed'],
+                                        capture_output=True)
+                if result.returncode == 0:
+                    Upgrade.stdOut("OpenLiteSpeed started successfully after rollback", 0)
+                    return True
+                else:
+                    Upgrade.stdOut("WARNING: OpenLiteSpeed may not have started after rollback", 0)
+                    return True  # Rollback was successful, startup issue is separate
+            else:
+                Upgrade.stdOut(f"ERROR: Backup not found at {backup_binary}", 0)
+                return False
+
+        except Exception as e:
+            Upgrade.stdOut(f"ERROR during rollback: {e}", 0)
+            return False
 
     @staticmethod
     def configureCustomModule():
@@ -4482,10 +4595,35 @@ pm.max_spare_servers = 3
                 # Configure the custom module
                 Upgrade.configureCustomModule()
 
-                # Restart OpenLiteSpeed to apply changes
+                # Restart OpenLiteSpeed to apply changes and verify it started
                 Upgrade.stdOut("Restarting OpenLiteSpeed...", 0)
                 command = '/usr/local/lsws/bin/lswsctrl restart'
                 Upgrade.executioner(command, 'Restart OpenLiteSpeed', 0)
+
+                # Verify OLS started successfully after restart
+                import time
+                time.sleep(5)  # Give OLS time to start
+
+                result = subprocess.run(['pgrep', '-f', 'openlitespeed'],
+                                        capture_output=True)
+                if result.returncode != 0:
+                    Upgrade.stdOut("WARNING: OpenLiteSpeed may not have started after upgrade!", 0)
+                    Upgrade.stdOut("Attempting auto-rollback...", 0)
+
+                    # Find the most recent backup directory
+                    backup_base = '/usr/local/lsws'
+                    backups = [d for d in os.listdir(backup_base) if d.startswith('backup-')]
+                    if backups:
+                        backups.sort(reverse=True)  # Most recent first
+                        latest_backup = os.path.join(backup_base, backups[0])
+                        if Upgrade.rollbackOLSBinary(latest_backup, '/usr/local/lsws/bin/openlitespeed'):
+                            Upgrade.stdOut("Auto-rollback completed successfully", 0)
+                        else:
+                            Upgrade.stdOut("ERROR: Auto-rollback failed! Manual intervention may be required.", 0)
+                    else:
+                        Upgrade.stdOut("ERROR: No backup found for rollback!", 0)
+                else:
+                    Upgrade.stdOut("OpenLiteSpeed restarted successfully", 0)
             else:
                 Upgrade.stdOut("Custom binary installation failed, continuing with upgrade...", 0)
 
