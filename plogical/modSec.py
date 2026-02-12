@@ -22,15 +22,15 @@ class modSec:
     # These prevent ABI incompatibility crashes (Signal 11/SIGSEGV)
     MODSEC_COMPATIBLE = {
         'rhel8': {
-            'url': 'https://cyberpanel.net/mod_security-compatible-rhel8.so',
+            'url': 'https://cyberpanel.net/mod_security-2.4.4-x86_64-rhel8.so',
             'sha256': 'bbbf003bdc7979b98f09b640dffe2cbbe5f855427f41319e4c121403c05837b2'
         },
         'rhel9': {
-            'url': 'https://cyberpanel.net/mod_security-compatible-rhel.so',
+            'url': 'https://cyberpanel.net/mod_security-2.4.4-x86_64-rhel9.so',
             'sha256': '19deb2ffbaf1334cf4ce4d46d53f747a75b29e835bf5a01f91ebcc0c78e98629'
         },
         'ubuntu': {
-            'url': 'https://cyberpanel.net/mod_security-compatible-ubuntu.so',
+            'url': 'https://cyberpanel.net/mod_security-2.4.4-x86_64-ubuntu.so',
             'sha256': 'ed02c813136720bd4b9de5925f6e41bdc8392e494d7740d035479aaca6d1e0cd'
         }
     }
