@@ -326,26 +326,26 @@ class InstallCyberPanel:
             platform = self.detectPlatform()
             InstallCyberPanel.stdOut(f"Detected platform: {platform}", 1)
 
-            # Platform-specific URLs and checksums (OpenLiteSpeed v1.8.4.1 - v2.0.5 Static Build)
-            # Module Build Date: December 28, 2025 - v2.2.0 Brute Force with Progressive Throttle
+            # Platform-specific URLs and checksums (OpenLiteSpeed v2.4.4 — all features config-driven, static linking)
+            # Includes: PHPConfig API, Origin Header Forwarding, ReadApacheConf (with Portmap), Auto-SSL (ACME v2), ModSecurity ABI Compatibility
             BINARY_CONFIGS = {
                 'rhel8': {
-                    'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-rhel8-static',
-                    'sha256': '6ce688a237615102cc1603ee1999b3cede0ff3482d31e1f65705e92396d34b3a',
-                    'module_url': 'https://cyberpanel.net/binaries/rhel8/cyberpanel_ols.so',
-                    'module_sha256': '7c33d89c7fbcd3ed7b0422fee3f49b5e041713c2c2b7316a5774f6defa147572'
+                    'url': 'https://cyberpanel.net/openlitespeed-2.4.4-x86_64-rhel8',
+                    'sha256': 'd08512da7a77468c09d6161de858db60bcc29aed7ce0abf76dca1c72104dc485',
+                    'module_url': 'https://cyberpanel.net/cyberpanel_ols-2.4.4-x86_64-rhel8.so',
+                    'module_sha256': '27f7fbbb74e83c217708960d4b18e2732b0798beecba8ed6eac01509165cb432'
                 },
                 'rhel9': {
-                    'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-rhel9-static',
-                    'sha256': '90468fb38767505185013024678d9144ae13100d2355097657f58719d98fbbc4',
-                    'module_url': 'https://cyberpanel.net/binaries/rhel9/cyberpanel_ols.so',
-                    'module_sha256': 'ae65337e2d13babc0c675bb4264d469daffa2efb7627c9bf39ac59e42e3ebede'
+                    'url': 'https://cyberpanel.net/openlitespeed-2.4.4-x86_64-rhel9',
+                    'sha256': '418d2ea06e29c0f847a2e6cf01f7641d5fb72b65a04e27a8f6b3b54d673cc2df',
+                    'module_url': 'https://cyberpanel.net/cyberpanel_ols-2.4.4-x86_64-rhel9.so',
+                    'module_sha256': '50cb00fa2b8269ec9b0bf300f1b26d3b76d3791c1b022343e1290a0d25e7fda8'
                 },
                 'ubuntu': {
-                    'url': 'https://cyberpanel.net/openlitespeed-phpconfig-x86_64-ubuntu-static',
-                    'sha256': '89aaf66474e78cb3c1666784e0e7a417550bd317e6ab148201bdc318d36710cb',
-                    'module_url': 'https://cyberpanel.net/binaries/ubuntu/cyberpanel_ols.so',
-                    'module_sha256': '62978ede1f174dd2885e5227a3d9cc463d0c27acd77cfc23743d7309ee0c54ea'
+                    'url': 'https://cyberpanel.net/openlitespeed-2.4.4-x86_64-ubuntu',
+                    'sha256': '60edf815379c32705540ad4525ea6d07c0390cabca232b6be12376ee538f4b1b',
+                    'module_url': 'https://cyberpanel.net/cyberpanel_ols-2.4.4-x86_64-ubuntu.so',
+                    'module_sha256': 'bd47069d13bb098201f3e72d4d56876193c898ebfa0ac2eb26796abebc991a88'
                 }
             }
 
@@ -498,6 +498,26 @@ module cyberpanel_ols {
 
             # Configure the custom module
             self.configureCustomModule()
+
+            # Enable Auto-SSL in httpd_config.conf
+            try:
+                import re
+                conf_path = '/usr/local/lsws/conf/httpd_config.conf'
+                if os.path.exists(conf_path):
+                    with open(conf_path, 'r') as f:
+                        content = f.read()
+                    if 'autoSSL' not in content:
+                        content = re.sub(
+                            r'(adminEmails\s+\S+)',
+                            r'\1\nautoSSL                   1\nacmeEmail                 admin@cyberpanel.net',
+                            content,
+                            count=1
+                        )
+                        with open(conf_path, 'w') as f:
+                            f.write(content)
+                        InstallCyberPanel.stdOut("Auto-SSL enabled in httpd_config.conf", 1)
+            except Exception as e:
+                InstallCyberPanel.stdOut(f"WARNING: Could not enable Auto-SSL: {e}", 1)
 
         else:
             try:
