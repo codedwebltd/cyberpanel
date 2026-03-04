@@ -2802,6 +2802,95 @@ CREATE TABLE `websiteFunctions_backupsv2` (`id` integer AUTO_INCREMENT NOT NULL 
             pass
 
     @staticmethod
+    def setupWebmail():
+        """Set up Dovecot master user and webmail config for SSO (idempotent)"""
+        try:
+            # Skip if already configured
+            if os.path.exists('/etc/cyberpanel/webmail.conf'):
+                Upgrade.stdOut("Webmail master user already configured, skipping.", 0)
+                return
+
+            # Skip if no mail server installed
+            if not os.path.exists('/etc/dovecot/dovecot.conf'):
+                Upgrade.stdOut("Dovecot not installed, skipping webmail setup.", 0)
+                return
+
+            Upgrade.stdOut("Setting up webmail master user for SSO...", 0)
+
+            from plogical.randomPassword import generate_pass
+
+            master_password = generate_pass(32)
+
+            # Hash the password using doveadm
+            result = subprocess.run(
+                ['doveadm', 'pw', '-s', 'SHA512-CRYPT', '-p', master_password],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                Upgrade.stdOut("doveadm pw failed: " + result.stderr, 0)
+                return
+
+            password_hash = result.stdout.strip()
+
+            # Write /etc/dovecot/master-users
+            with open('/etc/dovecot/master-users', 'w') as f:
+                f.write('cyberpanel_master:' + password_hash + '\n')
+            os.chmod('/etc/dovecot/master-users', 0o600)
+            subprocess.call(['chown', 'dovecot:dovecot', '/etc/dovecot/master-users'])
+
+            # Write /etc/cyberpanel/webmail.conf
+            webmail_conf = {
+                'master_user': 'cyberpanel_master',
+                'master_password': master_password
+            }
+            with open('/etc/cyberpanel/webmail.conf', 'w') as f:
+                json.dump(webmail_conf, f)
+            os.chmod('/etc/cyberpanel/webmail.conf', 0o600)
+            subprocess.call(['chown', 'nobody:nobody', '/etc/cyberpanel/webmail.conf'])
+
+            # Patch dovecot.conf if master user config not present
+            dovecot_conf_path = '/etc/dovecot/dovecot.conf'
+            with open(dovecot_conf_path, 'r') as f:
+                dovecot_content = f.read()
+
+            if 'auth_master_user_separator' not in dovecot_content:
+                master_block = """auth_master_user_separator = *
+
+passdb {
+    driver = passwd-file
+    master = yes
+    args = /etc/dovecot/master-users
+    result_success = continue
+}
+
+"""
+                dovecot_content = dovecot_content.replace(
+                    'passdb {',
+                    master_block + 'passdb {',
+                    1  # Only replace the first occurrence
+                )
+                with open(dovecot_conf_path, 'w') as f:
+                    f.write(dovecot_content)
+
+            # Run webmail migrations
+            Upgrade.executioner(
+                'python /usr/local/CyberCP/manage.py makemigrations webmail',
+                'Webmail makemigrations', shell=True
+            )
+            Upgrade.executioner(
+                'python /usr/local/CyberCP/manage.py migrate',
+                'Webmail migrate', shell=True
+            )
+
+            # Restart Dovecot
+            subprocess.call(['systemctl', 'restart', 'dovecot'])
+
+            Upgrade.stdOut("Webmail master user setup complete!", 0)
+
+        except BaseException as msg:
+            Upgrade.stdOut("setupWebmail error: " + str(msg), 0)
+
+    @staticmethod
     def manageServiceMigrations():
         try:
             connection, cursor = Upgrade.setupConnection('cyberpanel')
@@ -4725,6 +4814,7 @@ pm.max_spare_servers = 3
         Upgrade.s3BackupMigrations()
         Upgrade.containerMigrations()
         Upgrade.manageServiceMigrations()
+        Upgrade.setupWebmail()
         Upgrade.enableServices()
 
         Upgrade.installPHP73()

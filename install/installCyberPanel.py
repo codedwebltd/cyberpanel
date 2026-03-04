@@ -705,6 +705,50 @@ module cyberpanel_ols {
             logging.InstallLog.writeToFile('[ERROR] ' + str(msg) + " [installSieve]")
             return 0
 
+    def setupWebmail(self):
+        """Set up Dovecot master user and webmail config for SSO"""
+        try:
+            InstallCyberPanel.stdOut("Setting up webmail master user for SSO...", 1)
+
+            from plogical.randomPassword import generate_pass
+
+            master_password = generate_pass(32)
+
+            # Hash the password using doveadm
+            result = subprocess.run(
+                ['doveadm', 'pw', '-s', 'SHA512-CRYPT', '-p', master_password],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                logging.InstallLog.writeToFile('[ERROR] doveadm pw failed: ' + result.stderr + " [setupWebmail]")
+                return 0
+
+            password_hash = result.stdout.strip()
+
+            # Write /etc/dovecot/master-users
+            with open('/etc/dovecot/master-users', 'w') as f:
+                f.write('cyberpanel_master:' + password_hash + '\n')
+            os.chmod('/etc/dovecot/master-users', 0o600)
+            subprocess.call(['chown', 'dovecot:dovecot', '/etc/dovecot/master-users'])
+
+            # Write /etc/cyberpanel/webmail.conf
+            import json as json_module
+            webmail_conf = {
+                'master_user': 'cyberpanel_master',
+                'master_password': master_password
+            }
+            with open('/etc/cyberpanel/webmail.conf', 'w') as f:
+                json_module.dump(webmail_conf, f)
+            os.chmod('/etc/cyberpanel/webmail.conf', 0o600)
+            subprocess.call(['chown', 'nobody:nobody', '/etc/cyberpanel/webmail.conf'])
+
+            InstallCyberPanel.stdOut("Webmail master user setup complete!", 1)
+            return 1
+
+        except BaseException as msg:
+            logging.InstallLog.writeToFile('[ERROR] ' + str(msg) + " [setupWebmail]")
+            return 0
+
     def installMySQL(self, mysql):
 
         ############## Install mariadb ######################
@@ -1319,6 +1363,9 @@ def Main(cwd, mysql, distro, ent, serial=None, port="8090", ftp=None, dns=None, 
 
     logging.InstallLog.writeToFile('Installing Sieve for email filtering..,55')
     installer.installSieve()
+
+    logging.InstallLog.writeToFile('Setting up webmail master user..,57')
+    installer.setupWebmail()
 
     logging.InstallLog.writeToFile('Installing MySQL,60')
     installer.installMySQL(mysql)
