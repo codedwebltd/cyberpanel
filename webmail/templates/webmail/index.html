@@ -392,10 +392,17 @@
                                 <option value="flag">Flag</option>
                             </select>
                         </div>
-                        <div class="wm-field" ng-if="editingRule.actionType !== 'discard' && editingRule.actionType !== 'flag'">
-                            <label>{% trans "Target" %}</label>
+                        <div class="wm-field" ng-if="editingRule.actionType === 'move'">
+                            <label>{% trans "Target Folder" %}</label>
+                            <select ng-model="editingRule.actionValue" class="form-control">
+                                <option value="">-- {% trans "Select Folder" %} --</option>
+                                <option ng-repeat="f in folders" value="{$ f.display_name || f.name $}">{$ f.display_name || f.name $}</option>
+                            </select>
+                        </div>
+                        <div class="wm-field" ng-if="editingRule.actionType === 'forward'">
+                            <label>{% trans "Forward To" %}</label>
                             <input type="text" ng-model="editingRule.actionValue" class="form-control"
-                                   placeholder="{$ editingRule.actionType === 'move' ? 'Folder name' : 'Email address' $}">
+                                   placeholder="Email address">
                         </div>
                     </div>
                     <div class="wm-form-actions">

@@ -696,6 +696,7 @@ module cyberpanel_ols {
 
             # Write ManageSieve config
             managesieve_conf = '/etc/dovecot/conf.d/20-managesieve.conf'
+            os.makedirs('/etc/dovecot/conf.d', exist_ok=True)
             with open(managesieve_conf, 'w') as f:
                 f.write("""protocols = $protocols sieve
 

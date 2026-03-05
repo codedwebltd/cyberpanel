@@ -208,7 +208,11 @@ class SieveClient:
             # Map action
             if action_type == 'move':
                 requires.add('fileinto')
-                action = 'fileinto "%s";' % action_value
+                # Ensure folder uses INBOX. namespace prefix for dovecot
+                folder = action_value
+                if folder and not folder.startswith('INBOX.'):
+                    folder = 'INBOX.%s' % folder
+                action = 'fileinto "%s";' % folder
             elif action_type == 'forward':
                 requires.add('redirect')
                 action = 'redirect "%s";' % action_value
@@ -254,6 +258,9 @@ class SieveClient:
                 action_type = 'move'
                 av = re.search(r'fileinto\s+"([^"]+)"', action_block)
                 action_value = av.group(1) if av else ''
+                # Strip INBOX. namespace prefix for display
+                if action_value.startswith('INBOX.'):
+                    action_value = action_value[6:]
             elif 'redirect' in action_block:
                 action_type = 'forward'
                 av = re.search(r'redirect\s+"([^"]+)"', action_block)

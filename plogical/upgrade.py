@@ -2857,6 +2857,8 @@ CREATE TABLE `websiteFunctions_backupsv2` (`id` integer AUTO_INCREMENT NOT NULL 
                 Upgrade.stdOut("Dovecot not installed, skipping Sieve setup.", 0)
                 return
 
+            import re
+
             dovecot_conf = '/etc/dovecot/dovecot.conf'
             with open(dovecot_conf, 'r') as f:
                 content = f.read()
@@ -2864,33 +2866,37 @@ CREATE TABLE `websiteFunctions_backupsv2` (`id` integer AUTO_INCREMENT NOT NULL 
             changed = False
 
             # Add sieve to protocols if missing
-            if 'sieve' not in content.split('\n')[0]:
-                content = content.replace('protocols = imap pop3', 'protocols = imap pop3 sieve', 1)
+            protocols_match = re.search(r'^protocols\s*=\s*(.+)$', content, re.MULTILINE)
+            if protocols_match and 'sieve' not in protocols_match.group(1):
+                content = content.replace(protocols_match.group(0),
+                    protocols_match.group(0) + ' sieve')
                 changed = True
 
-            # Add sieve plugin to protocol lda if missing
-            import re
-            lda_match = re.search(r'(protocol lda\s*\{[^}]*mail_plugins\s*=\s*)(zlib)(\s*\n)', content)
-            if lda_match and 'sieve' not in lda_match.group(0):
+            # Add sieve plugin to protocol lda mail_plugins if missing
+            lda_match = re.search(r'(protocol lda\s*\{[^}]*mail_plugins\s*=\s*)([^\n]+)', content)
+            if lda_match and 'sieve' not in lda_match.group(2):
                 content = content.replace(lda_match.group(0),
-                    lda_match.group(1) + 'zlib sieve' + lda_match.group(3))
+                    lda_match.group(1) + lda_match.group(2).rstrip() + ' sieve')
                 changed = True
 
             # Add lda_mailbox_autocreate/autosubscribe for sieve fileinto
             if 'lda_mailbox_autocreate' not in content:
-                content = re.sub(
-                    r'(protocol lda\s*\{[^}]*mail_plugins\s*=\s*zlib sieve\n)',
-                    r'\1    lda_mailbox_autocreate = yes\n    lda_mailbox_autosubscribe = yes\n',
-                    content)
-                changed = True
+                lda_plugins = re.search(r'(protocol lda\s*\{[^}]*mail_plugins\s*=[^\n]+\n)', content)
+                if lda_plugins:
+                    content = content.replace(lda_plugins.group(0),
+                        lda_plugins.group(0) +
+                        '    lda_mailbox_autocreate = yes\n    lda_mailbox_autosubscribe = yes\n')
+                    changed = True
 
             # Add sieve storage settings to plugin section
             if 'sieve_dir' not in content:
-                content = re.sub(
-                    r'(plugin\s*\{[^}]*zlib_save_level\s*=\s*6\n)',
-                    r'\1\n  sieve = ~/sieve/.dovecot.sieve\n  sieve_dir = ~/sieve\n',
-                    content)
-                changed = True
+                plugin_match = re.search(r'(plugin\s*\{[^}]*)(})', content)
+                if plugin_match:
+                    content = content.replace(plugin_match.group(0),
+                        plugin_match.group(1) +
+                        '\n  sieve = ~/sieve/.dovecot.sieve\n  sieve_dir = ~/sieve\n\n' +
+                        plugin_match.group(2))
+                    changed = True
 
             if changed:
                 with open(dovecot_conf, 'w') as f:
@@ -2901,11 +2907,11 @@ CREATE TABLE `websiteFunctions_backupsv2` (`id` integer AUTO_INCREMENT NOT NULL 
             if os.path.exists(sql_conf):
                 with open(sql_conf, 'r') as f:
                     sql_content = f.read()
-                if 'as home' not in sql_content and "user_query" in sql_content:
-                    sql_content = sql_content.replace(
-                        "user_query = SELECT '5000' as uid, '5000' as gid, mail FROM e_users WHERE email='%u';",
-                        "user_query = SELECT '5000' as uid, '5000' as gid, mail, CONCAT('/home/vmail/', SUBSTRING_INDEX(email, '@', -1), '/', SUBSTRING_INDEX(email, '@', 1)) as home FROM e_users WHERE email='%u';"
-                    )
+                if 'as home' not in sql_content and 'user_query' in sql_content:
+                    sql_content = re.sub(
+                        r"(user_query\s*=\s*SELECT\s+'5000'\s+as\s+uid,\s+'5000'\s+as\s+gid,\s+mail)\s+(FROM\s+e_users\s+WHERE\s+email='%u';)",
+                        r"\1, CONCAT('/home/vmail/', SUBSTRING_INDEX(email, '@', -1), '/', SUBSTRING_INDEX(email, '@', 1)) as home \2",
+                        sql_content)
                     with open(sql_conf, 'w') as f:
                         f.write(sql_content)
 
@@ -2915,10 +2921,11 @@ CREATE TABLE `websiteFunctions_backupsv2` (`id` integer AUTO_INCREMENT NOT NULL 
             if os.path.exists(managesieve_conf):
                 with open(managesieve_conf, 'r') as f:
                     existing = f.read()
-                if 'inet_listener sieve' in existing and not existing.strip().startswith('#'):
+                if 'inet_listener sieve' in existing and 'service managesieve' in existing:
                     write_managesieve = False
 
             if write_managesieve:
+                os.makedirs('/etc/dovecot/conf.d', exist_ok=True)
                 with open(managesieve_conf, 'w') as f:
                     f.write("""protocols = $protocols sieve
 
