@@ -149,13 +149,28 @@ class IMAPClient:
 
     def list_messages(self, folder='INBOX', page=1, per_page=25, sort='date_desc'):
         self._select(folder)
-        status, data = self.conn.uid('search', None, 'ALL')
-        if status != 'OK':
-            return {'messages': [], 'total': 0, 'page': page, 'pages': 0}
 
-        uids = data[0].split() if data[0] else []
-        if sort == 'date_desc':
-            uids = list(reversed(uids))
+        # Try IMAP SORT for proper date ordering (Dovecot supports this)
+        uids = []
+        try:
+            if sort == 'date_desc':
+                status, data = self.conn.uid('sort', '(REVERSE DATE)', 'UTF-8', 'ALL')
+            else:
+                status, data = self.conn.uid('sort', '(DATE)', 'UTF-8', 'ALL')
+            if status == 'OK' and data[0]:
+                uids = data[0].split()
+        except Exception:
+            pass
+
+        # Fallback to search + reverse UIDs if SORT not supported
+        if not uids:
+            status, data = self.conn.uid('search', None, 'ALL')
+            if status != 'OK':
+                return {'messages': [], 'total': 0, 'page': page, 'pages': 0}
+            uids = data[0].split() if data[0] else []
+            if sort == 'date_desc':
+                uids = list(reversed(uids))
+
         total = len(uids)
         pages = max(1, (total + per_page - 1) // per_page)
         page = max(1, min(page, pages))
