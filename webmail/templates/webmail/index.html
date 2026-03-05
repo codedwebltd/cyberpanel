@@ -176,6 +176,15 @@
                 </div>
                 <form name="composeForm" ng-submit="sendMessage()" class="wm-compose-form">
                     <div class="wm-field">
+                        <label>{% trans "From" %}</label>
+                        <select ng-model="currentEmail"
+                                ng-options="a for a in managedAccounts"
+                                ng-change="switchAccount()"
+                                ng-if="managedAccounts.length > 1" class="form-control"></select>
+                        <input type="text" value="{$ currentEmail $}" class="form-control" readonly
+                               ng-if="managedAccounts.length <= 1">
+                    </div>
+                    <div class="wm-field">
                         <label>{% trans "To" %}</label>
                         <input type="text" ng-model="compose.to" class="form-control"
                                wm-autocomplete required>
@@ -435,6 +444,6 @@
     </div>
 </div>
 
-<script src="{% static 'webmail/webmail.js' %}?v=3"></script>
+<script src="{% static 'webmail/webmail.js' %}?v=5"></script>
 
 {% endblock %}

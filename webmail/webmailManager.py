@@ -46,6 +46,18 @@ class WebmailManager:
             return self.request.POST.dict()
 
     def _get_email(self):
+        # Check for explicit email in POST body (from account switcher)
+        # This ensures the correct account is used even if session is stale
+        try:
+            data = json.loads(self.request.body)
+            explicit = data.get('fromAccount', '')
+            if explicit:
+                accounts = self._get_managed_accounts()
+                if explicit in accounts:
+                    self.request.session['webmail_email'] = explicit
+                    return explicit
+        except Exception:
+            pass
         return self.request.session.get('webmail_email')
 
     def _get_master_config(self):
@@ -324,6 +336,14 @@ class WebmailManager:
 
     def apiSendMessage(self):
         try:
+            # For multipart forms, check fromAccount in POST data
+            if self.request.content_type and 'multipart' in self.request.content_type:
+                from_account = self.request.POST.get('fromAccount', '')
+                if from_account:
+                    accounts = self._get_managed_accounts()
+                    if from_account in accounts:
+                        self.request.session['webmail_email'] = from_account
+
             email_addr = self._get_email()
             if not email_addr:
                 return self._error('Not logged in.')
@@ -390,7 +410,7 @@ class WebmailManager:
             except Exception:
                 pass
 
-            return self._success({'messageId': result['message_id']})
+            return self._success({'messageId': result['message_id'], 'sentFrom': email_addr})
         except Exception as e:
             return self._error(str(e))
 

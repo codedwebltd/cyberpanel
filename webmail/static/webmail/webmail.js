@@ -149,7 +149,12 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
     // ── Helper ───────────────────────────────────────────────
     function apiCall(url, data, callback, errback) {
         var config = {headers: {'X-CSRFToken': getCookie('csrftoken')}};
-        $http.post(url, data || {}, config).then(function(resp) {
+        var payload = data || {};
+        // Always send current account so backend uses the right email
+        if ($scope.currentEmail && !payload.fromAccount) {
+            payload.fromAccount = $scope.currentEmail;
+        }
+        $http.post(url, payload, config).then(function(resp) {
             if (callback) callback(resp.data);
         }, function(err) {
             console.error('API error:', url, err);
@@ -180,23 +185,28 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
     $scope.switchAccount = function() {
         var newEmail = $scope.currentEmail;
         if (!newEmail) return;
+
+        // Reset view state immediately
+        $scope.currentFolder = 'INBOX';
+        $scope.currentPage = 1;
+        $scope.openMsg = null;
+        $scope.viewMode = 'list';
+        $scope.messages = [];
+        $scope.contacts = [];
+        $scope.filteredContacts = [];
+        $scope.sieveRules = [];
+
         apiCall('/webmail/api/switchAccount', {email: newEmail}, function(data) {
             if (data.status === 1) {
-                $scope.currentFolder = 'INBOX';
-                $scope.currentPage = 1;
-                $scope.openMsg = null;
-                $scope.viewMode = 'list';
-                $scope.messages = [];
-                $scope.contacts = [];
-                $scope.filteredContacts = [];
-                $scope.sieveRules = [];
                 $scope.loadFolders();
                 $scope.loadSettings();
             } else {
                 notify(data.error_message || 'Failed to switch account', 'error');
+                console.error('switchAccount failed:', data);
             }
-        }, function() {
-            notify('Failed to switch account', 'error');
+        }, function(err) {
+            notify('Failed to switch account: ' + (err.status || 'unknown error'), 'error');
+            console.error('switchAccount HTTP error:', err);
         });
     };
 
@@ -488,6 +498,7 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
         stopDraftAutoSave();
 
         var fd = new FormData();
+        fd.append('fromAccount', $scope.currentEmail || '');
         fd.append('to', $scope.compose.to);
         fd.append('cc', $scope.compose.cc || '');
         fd.append('bcc', $scope.compose.bcc || '');
@@ -508,7 +519,7 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
         }).then(function(resp) {
             $scope.sending = false;
             if (resp.data.status === 1) {
-                notify('Message sent.');
+                notify('Message sent from ' + (resp.data.sentFrom || 'unknown'));
                 $scope.viewMode = 'list';
                 $scope.loadMessages();
             } else {
