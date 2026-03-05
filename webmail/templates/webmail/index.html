@@ -15,7 +15,7 @@
             <span>{$ currentEmail $}</span>
         </div>
         <div class="wm-account-switch">
-            <select ng-model="switchEmail" ng-change="switchAccount()"
+            <select ng-model="currentEmail" ng-change="switchAccount()"
                     ng-options="a for a in managedAccounts" class="wm-account-select">
             </select>
         </div>
@@ -435,6 +435,6 @@
     </div>
 </div>
 
-<script src="{% static 'webmail/webmail.js' %}?v=2"></script>
+<script src="{% static 'webmail/webmail.js' %}?v=3"></script>
 
 {% endblock %}

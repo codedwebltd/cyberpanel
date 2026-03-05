@@ -109,7 +109,6 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
     // ── State ────────────────────────────────────────────────
     $scope.currentEmail = '';
     $scope.managedAccounts = [];
-    $scope.switchEmail = '';
     $scope.folders = [];
     $scope.currentFolder = 'INBOX';
     $scope.messages = [];
@@ -169,7 +168,6 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
             if (data.status === 1) {
                 $scope.currentEmail = data.email;
                 $scope.managedAccounts = data.accounts || [];
-                $scope.switchEmail = data.email;
                 $scope.loadFolders();
                 $scope.loadSettings();
             } else {
@@ -180,10 +178,10 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
 
     // ── Account Switching ────────────────────────────────────
     $scope.switchAccount = function() {
-        if (!$scope.switchEmail || $scope.switchEmail === $scope.currentEmail) return;
-        apiCall('/webmail/api/switchAccount', {email: $scope.switchEmail}, function(data) {
+        var newEmail = $scope.currentEmail;
+        if (!newEmail) return;
+        apiCall('/webmail/api/switchAccount', {email: newEmail}, function(data) {
             if (data.status === 1) {
-                $scope.currentEmail = data.email;
                 $scope.currentFolder = 'INBOX';
                 $scope.currentPage = 1;
                 $scope.openMsg = null;
@@ -195,8 +193,10 @@ app.controller('webmailCtrl', ['$scope', '$http', '$sce', '$timeout', function($
                 $scope.loadFolders();
                 $scope.loadSettings();
             } else {
-                notify(data.error_message, 'error');
+                notify(data.error_message || 'Failed to switch account', 'error');
             }
+        }, function() {
+            notify('Failed to switch account', 'error');
         });
     };
 
