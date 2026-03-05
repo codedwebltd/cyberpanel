@@ -9,7 +9,7 @@
 <div class="webmail-container" ng-controller="webmailCtrl" ng-init="init()">
 
     <!-- Account Switcher Bar -->
-    <div class="wm-account-bar" ng-if="managedAccounts.length > 1">
+    <div class="wm-account-bar" ng-show="managedAccounts.length > 1">
         <div class="wm-account-current">
             <i class="fa fa-envelope"></i>
             <span>{$ currentEmail $}</span>
@@ -177,12 +177,12 @@
                 <form name="composeForm" ng-submit="sendMessage()" class="wm-compose-form">
                     <div class="wm-field">
                         <label>{% trans "From" %}</label>
-                        <select ng-model="currentEmail"
+                        <select ng-model="$parent.currentEmail"
                                 ng-options="a for a in managedAccounts"
                                 ng-change="switchAccount()"
-                                ng-if="managedAccounts.length > 1" class="form-control"></select>
+                                ng-show="managedAccounts.length > 1" class="form-control"></select>
                         <input type="text" value="{$ currentEmail $}" class="form-control" readonly
-                               ng-if="managedAccounts.length <= 1">
+                               ng-show="managedAccounts.length <= 1">
                     </div>
                     <div class="wm-field">
                         <label>{% trans "To" %}</label>
@@ -444,6 +444,6 @@
     </div>
 </div>
 
-<script src="{% static 'webmail/webmail.js' %}?v=5"></script>
+<script src="{% static 'webmail/webmail.js' %}?v=6"></script>
 
 {% endblock %}
