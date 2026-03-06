@@ -4846,8 +4846,8 @@ pm.max_spare_servers = 3
                     Upgrade.stdOut('[ERROR] Failed to install PHP 8.3')
                     return 0
             
-            # Remove existing PHP symlink if it exists
-            if os.path.exists('/usr/bin/php'):
+            # Remove existing PHP symlink if it exists (os.path.lexists catches broken symlinks too)
+            if os.path.lexists('/usr/bin/php'):
                 os.remove('/usr/bin/php')
 
             # Create symlink to PHP 8.3
