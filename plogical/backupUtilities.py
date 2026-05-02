@@ -933,7 +933,7 @@ class backupUtilities:
 
                                     ### take care of apache conf
 
-                                    url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+                                    url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
                                     data = {
                                         "name": "all",
                                         "IP": ACLManager.GetServerIP()
@@ -1198,7 +1198,7 @@ class backupUtilities:
 
                     ### apache starts here
 
-                    url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+                    url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
                     data = {
                         "name": "all",
                         "IP": ACLManager.GetServerIP()

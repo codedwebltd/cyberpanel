@@ -280,7 +280,7 @@ def FileManagerRoot(request):
         from plogical.processUtilities import ProcessUtilities
         if ProcessUtilities.decideServer() == ProcessUtilities.OLS:
 
-            url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
             data = {
                 "name": "Filemanager",
                  "IP": ipAddressLocal

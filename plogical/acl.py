@@ -1057,7 +1057,7 @@ class ACLManager:
             if ProcessUtilities.decideServer() == ProcessUtilities.ent:
                 return 1
 
-            url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
             data = {
                 "name": feature,
                 "IP": ACLManager.GetServerIP()

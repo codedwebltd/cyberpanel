@@ -12,7 +12,7 @@ import logging
 
 app = FastAPI()
 # JWT_SECRET = "YOUR_SECRET_KEY"
-JWT_SECRET = "DAsjK2gl50PE09d1N3uZPTQ6JdwwfiuhlyWKMVbUEpc"
+JWT_SECRET = "hpMhs_8swEmmoEpri8lLKM6K4rWxp9DdK0ytZi33_o0"
 JWT_ALGORITHM = "HS256"
 
 # Allow CORS for local dev/testing

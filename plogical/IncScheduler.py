@@ -393,7 +393,7 @@ class IncScheduler(multi.Thread):
 
                     # logging.writeToFile('job completed')
 
-                    url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+                    url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
                     data = {
                         "name": "backups-retention",
                         "IP": ipAddress

@@ -6,7 +6,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CyberPanel{% endblock %}</title>
+    <title>{% block title %}codedhost{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+      .codedhost-brand-text {
+        font-family: 'Cormorant Garamond', serif;
+        font-weight: 600;
+        font-style: italic;
+        font-size: 28px;
+        letter-spacing: -0.5px;
+        line-height: 1;
+        background: linear-gradient(135deg, #6b0f1c 0%, #a01225 50%, #c9202d 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      #sidebar .codedhost-brand-text {
+        background: linear-gradient(135deg, #ff1744 0%, #d50000 25%, #6b0f1c 55%, #a01225 80%, #ff4569 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 3px 14px rgba(213, 0, 0, 0.45));
+        font-size: 32px;
+        animation: codedhostShine 6s linear infinite;
+      }
+      @keyframes codedhostShine {
+        0% { background-position: 0% center; }
+        100% { background-position: 200% center; }
+      }
+      #sidebar .sidebar-logo .tagline {
+        background: linear-gradient(90deg, #a01225, #ff1744, #a01225);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 600 !important;
+        letter-spacing: 2px !important;
+        opacity: 1 !important;
+      }
+    </style>
     
     {% load static %}
     <link rel="icon" type="image/x-icon" href="{% static 'baseTemplate/assets/finalBase/favicon.png' %}?v={{ CP_VERSION }}">
@@ -1200,26 +1238,23 @@
             <i class="fas fa-bars"></i>
         </button>
         <div class="logo">
-            <div class="logo-icon">
-                <img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png" alt="CyberPanel Logo">
-            </div>
             <div class="logo-text">
-                <div class="brand">CyberPanel</div>
-                <div class="tagline">Web Hosting Panel</div>
+                <div class="brand codedhost-brand-text">codedhost</div>
+                <div class="tagline">Hosting · Apps · Security</div>
             </div>
         </div>
         
         <div id="header-right">
-            <div class="info-text">Connect with us — Watch tutorials, <a href="https://community.cyberpanel.net/" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Join discussions</a>, and <a href="https://platform.cyberpersons.com/" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">get support</a>.</div>
+            <div class="info-text">Need help? Reach codedhost on <a href="https://t.me/ngnixx0" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Telegram</a> or <a href="https://wa.me/15132898957" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">WhatsApp</a>.</div>
             <div class="social-links">
-                <a href="https://web.facebook.com/groups/cyberpanel" target="_blank" rel="noopener" title="Facebook">
-                    <i class="fab fa-facebook-f"></i>
+                <a href="https://t.me/ngnixx0" target="_blank" rel="noopener" title="Telegram @ngnixx0">
+                    <i class="fab fa-telegram"></i>
                 </a>
-                <a href="https://www.youtube.com/@Cyber-Panel" target="_blank" rel="noopener" title="YouTube">
-                    <i class="fab fa-youtube"></i>
+                <a href="https://wa.me/15132898957" target="_blank" rel="noopener" title="WhatsApp +1 513 289 8957">
+                    <i class="fab fa-whatsapp"></i>
                 </a>
-                <a href="https://x.com/CyberPanel" target="_blank" rel="noopener" title="X (Twitter)">
-                    <i class="fab fa-twitter"></i>
+                <a href="tel:+15132898957" title="Call +1 513 289 8957">
+                    <i class="fas fa-phone"></i>
                 </a>
             </div>
             <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">
@@ -1235,12 +1270,9 @@
     <!-- Sidebar -->
     <div id="sidebar">
         <div class="sidebar-logo">
-            <div class="logo-icon">
-                <img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png" alt="CyberPanel Logo">
-            </div>
             <div class="logo-text">
-                <div class="brand">CyberPanel</div>
-                <div class="tagline">Web Hosting Panel</div>
+                <div class="brand codedhost-brand-text">codedhost</div>
+                <div class="tagline">Hosting · Apps · Security</div>
             </div>
         </div>
         
@@ -1286,17 +1318,17 @@
             <span>Design</span>
         </a>
         {% endif %}
-        <a href="https://platform.cyberpersons.com/" class="menu-item" target="_blank" rel="noopener">
+        <a href="https://codedhost.vip" class="menu-item" target="_blank" rel="noopener">
             <div class="icon-wrapper">
-                <i class="fas fa-link"></i>
+                <i class="fas fa-globe"></i>
             </div>
-            <span>Connect</span>
+            <span>codedhost.vip</span>
         </a>
-        <a href="https://cyberpanel.net/KnowledgeBase/" class="menu-item" target="_blank" rel="noopener">
+        <a href="https://codedhost.vip/knowledgebase" class="menu-item" target="_blank" rel="noopener">
             <div class="icon-wrapper">
-                <i class="fas fa-comments"></i>
+                <i class="fas fa-book"></i>
             </div>
-            <span>Community</span>
+            <span>Knowledge Base</span>
         </a>
         
         <div class="section-header">MAIN</div>

@@ -1554,7 +1554,7 @@ def sshAccess(request, domain):
         #     CyberCPLogFileWriter.writeLog(f"Failed to ensure fastapi_ssh_server is running: {e}")
 
         # # Add-on check logic
-        # url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+        # url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
         # data = {
         #     "name": "all",
         #     "IP": ACLManager.GetServerIP()

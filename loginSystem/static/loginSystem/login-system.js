@@ -89,6 +89,9 @@ application.controller('loginSystem', function ($scope, $http, $window) {
         }
 
         function cantLoadInitialData(response) {
+            $("#verifyingLogin").hide();
+            $scope.errorMessage = "Could not reach server (HTTP " + (response && response.status ? response.status : "?") + "). Try again or contact support.";
+            $("#loginFailed").fadeIn();
         }
 
 

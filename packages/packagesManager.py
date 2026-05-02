@@ -25,7 +25,7 @@ class PackagesManager:
         Check if server has addon access for resource limits feature
         Returns True if addons are available, False otherwise
         """
-        url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
         addon_data = {
             "name": "all",
             "IP": ACLManager.GetServerIP()

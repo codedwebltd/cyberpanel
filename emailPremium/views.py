@@ -1233,7 +1233,7 @@ def installStatusMailScanner(request):
 ###Rspamd
 
 def Rspamd(request):
-    url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+    url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
     data = {
         "name": "email-debugger",
         "IP": ACLManager.GetServerIP()
@@ -1270,7 +1270,7 @@ def installRspamd(request):
         else:
             return ACLManager.loadErrorJson()
 
-        url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
         data = {
             "name": "email-debugger",
             "IP": ACLManager.GetServerIP()
@@ -1365,7 +1365,7 @@ def fetchRspamdSettings(request):
         else:
             return ACLManager.loadErrorJson('fetchStatus', 0)
 
-        url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
         data = {
             "name": "email-debugger",
             "IP": ACLManager.GetServerIP()
@@ -1884,7 +1884,7 @@ def RestartRspamd(request):
 ##Email Debugger
 
 def EmailDebugger(request):
-    url = "https://platform.cyberpersons.com/CyberpanelAdOns/Adonpermission"
+    url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
     data = {
         "name": "email-debugger",
         "IP": ACLManager.GetServerIP()
