@@ -1675,12 +1675,13 @@
                 <i class="fas fa-chevron-right chevron"></i>
             </a>
             <div id="backup-submenu" class="submenu">
-                {% if admin or createBackup %}
+                {# CODEDHOST: One-Click + Create Backup hidden from non-admins (perm-broken upstream). Admins keep them. #}
+                {% if admin %}
                 <a href="{% url 'OneClickBackups' %}" class="menu-item">
                     <span>One-Click Backups</span>
                 </a>
                 {% endif %}
-                {% if admin or createBackup %}
+                {% if admin %}
                 <a href="{% url 'backupSite' %}" class="menu-item">
                     <span>Create Backup</span>
                 </a>
@@ -1700,9 +1701,15 @@
                     <span>Schedule Backup</span>
                 </a>
                 {% endif %}
-                {% if admin or googleDriveBackups %}
+                {# CODEDHOST: split into admin's native gDrive vs user-facing Codedhost Backup. #}
+                {% if admin %}
                 <a href="{% url 'gDrive' %}" class="menu-item">
                     <span>Setup Google Drive</span>
+                </a>
+                {% endif %}
+                {% if not admin and googleDriveBackups %}
+                <a href="{% url 'gDrive' %}" class="menu-item">
+                    <span>Codedhost Backup</span>
                 </a>
                 {% endif %}
                 {% if admin or remoteBackups %}
