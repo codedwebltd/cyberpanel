@@ -1,690 +1,969 @@
 {% extends "baseTemplate/index.html" %}
 {% load i18n %}
-{% block title %}{% trans "Google Drive Backups - CyberPanel" %}{% endblock %}
+{% block title %}{% trans "Codedhost Backup - CyberPanel" %}{% endblock %}
 {% block content %}
-
 {% load static %}
-{% get_current_language as LANGUAGE_CODE %}
-<!-- Current language: {{ LANGUAGE_CODE }} -->
+
+{# ─── Codedhost Backup — native CP visual language ─────────────────────────── #}
 
 <style>
-    .modern-container {
+    /* ─── CP-native palette + layout ─── */
+    .cdh-modern-container {
         max-width: 1400px;
         margin: 0 auto;
         padding: 2rem;
     }
-    
-    .page-header {
+
+    .cdh-page-header {
         text-align: center;
-        margin-bottom: 3rem;
-        padding: 3rem 0;
-        background: linear-gradient(135deg, var(--bg-secondary, #f8f9ff) 0%, var(--bg-hover, #f0f1ff) 100%);
-        border-radius: 20px;
-        animation: fadeInDown 0.5s ease-out;
-        position: relative;
-        overflow: hidden;
+        margin-bottom: 2.5rem;
+        animation: cdh-fadeInDown 0.5s ease-out;
     }
-    
-    .page-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h100v100H0z" fill="none"/><path d="M0 50h100M50 0v100" stroke="%23e8e9ff" stroke-width="0.5"/></svg>') repeat;
-        transform: rotate(45deg);
-        opacity: 0.5;
-    }
-    
-    .page-title {
-        font-size: 3rem;
+    .cdh-page-title {
+        font-size: 2.25rem;
         font-weight: 700;
         color: var(--text-primary, #1e293b);
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 1rem;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .google-drive-icon {
-        width: 60px;
-        height: 60px;
-        background: var(--bg-primary, white);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1));
-    }
-    
-    .page-subtitle {
-        font-size: 1.25rem;
-        color: var(--text-secondary, #64748b);
-        margin-bottom: 1.5rem;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .header-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
+        gap: 0.875rem;
         flex-wrap: wrap;
-        position: relative;
-        z-index: 1;
     }
-    
-    .btn-primary {
-        background: #5b5fcf;
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
+    .cdh-page-title i {
+        color: var(--accent-color, #5b5fcf);
+    }
+    .cdh-page-subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary, #64748b);
+        margin-bottom: 0;
+    }
+    .cdh-brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: #b87a82;
+        font-weight: 500;
+        margin-top: 0.75rem;
+    }
+    .cdh-brand-mark::before {
+        content: '';
+        width: 8px; height: 8px; border-radius: 50%;
+        background: linear-gradient(135deg, #d49aa1, #7a1220);
+    }
+
+    /* Preview pills (preview-only — remove on lock-in) */
+    .cdh-preview-pills {
+        display: inline-flex;
+        gap: 0.25rem;
+        background: var(--bg-secondary, white);
+        padding: 0.25rem;
         border-radius: 10px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
-        font-size: 0.875rem;
+        border: 1px solid var(--border-color, #e8e9ff);
+        margin-top: 1.25rem;
     }
-    
-    .btn-primary:hover {
-        background: #4547a9;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(91, 95, 207, 0.4);
+    .cdh-preview-pill {
+        background: transparent;
+        border: 0;
+        padding: 0.45rem 0.85rem;
+        border-radius: 7px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+    }
+    .cdh-preview-pill:hover { color: var(--text-primary, #1e293b); }
+    .cdh-preview-pill.is-active {
+        background: var(--accent-color, #5b5fcf);
         color: white;
     }
-    
-    .btn-secondary {
-        background: var(--bg-primary, #fff);
-        color: #5b5fcf;
-        border: 1px solid var(--border-primary, #e8e9ff);
-        padding: 0.75rem 2rem;
-        border-radius: 10px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
-        font-size: 0.875rem;
+
+    /* Status pill */
+    .cdh-status-pill {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.4rem 0.8rem; border-radius: 999px;
+        font-size: 0.75rem; font-weight: 600;
+        background: var(--bg-secondary, white);
+        border: 1px solid var(--border-color, #e8e9ff);
     }
-    
-    .btn-secondary:hover {
-        background: var(--bg-secondary, #f8f9ff);
-        border-color: #5b5fcf;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(91, 95, 207, 0.2);
+    .cdh-status-pill .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: #cbd5e1;
     }
-    
-    .btn-danger {
-        background: #ef4444;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.825rem;
+    .cdh-status-pill.is-on .dot {
+        background: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
     }
-    
-    .btn-danger:hover {
-        background: #dc2626;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-    }
-    
-    .btn-gray {
-        background: #6b7280;
-        color: white;
-        border: none;
-        padding: 0.5rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
-    }
-    
-    .btn-gray:hover {
-        background: #4b5563;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
-    }
-    
-    .main-card {
-        background: var(--bg-primary, white);
+    .cdh-status-pill.is-off .dot { background: #94a3b8; }
+    .cdh-status-pill.is-on  { color: #065f46; }
+    .cdh-status-pill.is-off { color: #64748b; }
+
+    /* ─── Main card (CP-native pattern) ─── */
+    .cdh-card {
+        background: var(--bg-secondary, white);
         border-radius: 16px;
-        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05)), var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.08));
-        border: 1px solid var(--border-primary, #e8e9ff);
+        box-shadow: 0 1px 3px var(--shadow-light, rgba(0,0,0,0.05)), 0 10px 40px var(--shadow-color, rgba(0,0,0,0.08));
+        border: 1px solid var(--border-color, #e8e9ff);
         overflow: hidden;
-        margin-bottom: 2rem;
-        animation: fadeInUp 0.5s ease-out;
+        animation: cdh-fadeInUp 0.5s ease-out;
+        margin-bottom: 1.5rem;
     }
-    
-    .card-header {
-        background: linear-gradient(135deg, var(--bg-secondary, #f8f9ff) 0%, var(--bg-hover, #f0f1ff) 100%);
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--border-primary, #e8e9ff);
+    .cdh-card-header {
+        background: linear-gradient(135deg, var(--bg-hover, #f8f9ff) 0%, var(--bg-gradient, #f0f1ff) 100%);
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid var(--border-color, #e8e9ff);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
-    
-    .card-title {
-        font-size: 1.25rem;
+    .cdh-card-title {
+        font-size: 1.05rem;
         font-weight: 600;
         color: var(--text-primary, #1e293b);
         margin: 0;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.625rem;
     }
-    
-    .card-body {
-        padding: 2rem;
+    .cdh-card-title i {
+        color: var(--accent-color, #5b5fcf);
+        font-size: 0.95rem;
     }
-    
-    .account-selector {
-        background: var(--bg-secondary, #f8f9ff);
-        border: 1px solid var(--border-primary, #e8e9ff);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
+    .cdh-card-body { padding: 2rem; }
+    .cdh-card-body.tight { padding: 0; }
+
+    /* ─── Buttons (CP-native) ─── */
+    .cdh-btn-primary {
+        background: var(--accent-color, #5b5fcf);
+        color: white;
+        border: none;
+        padding: 0.7rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all .25s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        font-family: inherit;
     }
-    
-    .form-section {
-        margin-bottom: 2rem;
+    .cdh-btn-primary:hover {
+        background: var(--accent-hover, #4547a9);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(91, 95, 207, 0.4);
+        color: white; text-decoration: none;
     }
-    
-    .form-group {
+    .cdh-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .cdh-btn-secondary {
+        background: var(--bg-secondary, white);
+        color: var(--accent-color, #5b5fcf);
+        border: 1px solid var(--border-color, #e8e9ff);
+        padding: 0.7rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all .25s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        font-family: inherit;
+    }
+    .cdh-btn-secondary:hover {
+        background: var(--bg-hover, #f8f9ff);
+        border-color: var(--accent-color, #5b5fcf);
+        color: var(--accent-color, #5b5fcf);
+        text-decoration: none;
+    }
+    .cdh-btn-sm { padding: 0.45rem 0.9rem; font-size: 0.8125rem; }
+
+    /* ─── Hero (State A) ─── */
+    .cdh-hero {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .cdh-hero-icon {
+        width: 88px; height: 88px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, var(--accent-color, #5b5fcf), #7c3aed);
+        display: grid; place-items: center;
+        flex-shrink: 0;
+        box-shadow: 0 12px 28px rgba(91, 95, 207, 0.3);
+        color: white;
+    }
+    .cdh-hero-icon i { font-size: 2rem; }
+    .cdh-hero-body { flex: 1; min-width: 280px; }
+    .cdh-hero-body h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+    }
+    .cdh-hero-body p {
+        margin: 0.5rem 0 1.25rem;
+        font-size: 0.9375rem;
+        color: var(--text-secondary, #64748b);
+        max-width: 540px;
+        line-height: 1.6;
+    }
+    .cdh-hero-bullets {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem 1.5rem;
+        margin: 1.25rem 0 0;
+        padding: 0;
+        list-style: none;
+    }
+    .cdh-hero-bullets li {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-primary, #1e293b);
+        align-items: center;
+    }
+    .cdh-hero-bullets li i {
+        color: #10b981;
+        font-size: 0.875rem;
+    }
+
+    /* ─── Plan grid (State B) ─── */
+    .cdh-plan-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.25rem;
         margin-bottom: 1.5rem;
     }
-    
-    .form-label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        color: var(--text-primary, #1e293b);
-        font-size: 0.875rem;
+    .cdh-plan {
+        position: relative;
+        background: var(--bg-secondary, white);
+        border: 1.5px solid var(--border-color, #e8e9ff);
+        border-radius: 16px;
+        padding: 1.75rem;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: all .25s ease;
+        cursor: pointer;
     }
-    
-    .form-control {
-        width: 100%;
-        padding: 0.875rem 1rem;
-        border: 1px solid var(--border-primary, #e8e9ff);
-        border-radius: 10px;
-        font-size: 0.875rem;
-        transition: all 0.3s ease;
-        background: var(--bg-primary, #fff);
+    .cdh-plan:hover {
+        border-color: var(--accent-color, #5b5fcf);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(91, 95, 207, 0.15);
     }
-    
-    .form-control:focus {
-        outline: none;
-        border-color: #5b5fcf;
-        box-shadow: 0 0 0 3px rgba(91, 95, 207, 0.1);
+    .cdh-plan.is-recommended {
+        border-color: #b87a82;
+        background: linear-gradient(180deg, rgba(184, 122, 130, 0.04), white 70%);
     }
-    
-    .gdrive-table {
-        width: 100%;
-        background: var(--bg-primary, white);
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid var(--border-primary, #e8e9ff);
-    }
-    
-    .gdrive-table thead {
-        background: linear-gradient(135deg, var(--bg-secondary, #f8f9ff) 0%, var(--bg-hover, #f0f1ff) 100%);
-    }
-    
-    .gdrive-table th {
-        padding: 1rem;
-        text-align: left;
-        font-weight: 600;
-        color: var(--text-primary, #1e293b);
-        font-size: 0.875rem;
+    .cdh-plan-badge {
+        position: absolute;
+        top: -10px; right: 16px;
+        padding: 0.2rem 0.7rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-bottom: 1px solid var(--border-primary, #e8e9ff);
+        background: linear-gradient(135deg, #d49aa1, #7a1220);
+        color: white;
+        border-radius: 999px;
+        box-shadow: 0 4px 12px rgba(122, 18, 32, 0.25);
     }
-    
-    .gdrive-table td {
-        padding: 1rem;
-        color: var(--text-secondary, #64748b);
+    .cdh-plan-name {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent-color, #5b5fcf);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    .cdh-plan.is-recommended .cdh-plan-name { color: #b87a82; }
+    .cdh-plan-price {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+        line-height: 1;
+    }
+    .cdh-plan-price .cycle {
         font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary, #94a3b8);
+        margin-left: 0.25rem;
+    }
+    .cdh-plan-feats {
+        list-style: none;
+        padding: 1rem 0 0;
+        margin: 1rem 0 1.25rem;
+        flex: 1;
+        border-top: 1px solid var(--border-color, #e8e9ff);
+    }
+    .cdh-plan-feats li {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        font-size: 0.875rem;
+        color: var(--text-primary, #1e293b);
+        padding: 0.375rem 0;
+    }
+    .cdh-plan-feats li i { color: #10b981; font-size: 0.8125rem; }
+
+    /* ─── Stats row (State C) ─── */
+    .cdh-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .cdh-stat {
+        background: var(--bg-secondary, white);
+        border: 1px solid var(--border-color, #e8e9ff);
+        border-radius: 12px;
+        padding: 1.125rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .cdh-stat .label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary, #64748b);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.4rem;
+    }
+    .cdh-stat .value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+    }
+    .cdh-stat .value .light {
+        font-size: 0.875rem;
+        color: var(--text-secondary, #94a3b8);
+        font-weight: 500;
+        margin-left: 0.25rem;
+    }
+    .cdh-stat .meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #94a3b8);
+        margin-top: 0.25rem;
+    }
+    .cdh-stat .meta.ok { color: #10b981; }
+
+    /* ─── Quota usage card ─── */
+    .cdh-quota-head {
+        display: flex; justify-content: space-between; align-items: baseline;
+        margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .cdh-quota-head h4 {
+        margin: 0; font-size: 0.95rem; font-weight: 600;
+        color: var(--text-primary, #1e293b);
+    }
+    .cdh-quota-head .pct {
+        font-size: 0.875rem; color: var(--text-secondary, #64748b);
+    }
+    .cdh-quota-head .pct b { color: var(--accent-color, #5b5fcf); font-weight: 700; }
+    .cdh-quota-bar {
+        height: 10px; border-radius: 5px;
+        background: #f1f5f9;
+        overflow: hidden;
+    }
+    .cdh-quota-fill {
+        height: 100%; border-radius: 5px;
+        background: linear-gradient(90deg, var(--accent-color, #5b5fcf), #7c3aed);
+        width: 42%;
+        transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+    .cdh-quota-foot {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 0.875rem; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .cdh-quota-foot .breakdown {
+        font-size: 0.8125rem; color: var(--text-secondary, #64748b);
+    }
+
+    /* ─── Sites + Feed grid ─── */
+    .cdh-grid-2 {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 1.25rem;
+    }
+
+    /* Sites list */
+    .cdh-site-row {
+        display: flex; align-items: center; gap: 0.875rem;
+        padding: 0.875rem 2rem;
+        border-bottom: 1px solid var(--border-light, #f3f4f6);
+        cursor: pointer;
+        transition: background .15s;
+    }
+    .cdh-site-row:last-child { border-bottom: none; }
+    .cdh-site-row:hover { background: var(--bg-hover, #f8f9ff); }
+    .cdh-site-row.is-new { background: rgba(245, 158, 11, 0.04); }
+    .cdh-site-row.is-new:hover { background: rgba(245, 158, 11, 0.08); }
+
+    .cdh-checkbox {
+        flex-shrink: 0;
+        width: 18px; height: 18px;
+        border-radius: 5px;
+        border: 1.5px solid #cbd5e1;
+        background: white;
+        display: grid; place-items: center;
+        transition: all .15s;
+    }
+    .cdh-checkbox i {
+        color: white; font-size: 0.625rem;
+        opacity: 0; transform: scale(.6);
+        transition: all .15s;
+    }
+    .cdh-checkbox.is-checked {
+        background: var(--accent-color, #5b5fcf);
+        border-color: var(--accent-color, #5b5fcf);
+    }
+    .cdh-checkbox.is-checked i { opacity: 1; transform: scale(1); }
+
+    .cdh-site-info { flex: 1; min-width: 0; }
+    .cdh-site-info .domain {
+        font-size: 0.9375rem;
+        color: var(--text-primary, #1e293b);
+        font-weight: 500;
+    }
+    .cdh-site-info .meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #94a3b8);
+        margin-top: 0.125rem;
+    }
+
+    .cdh-site-tag {
+        flex-shrink: 0;
+        font-size: 0.6875rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .cdh-site-tag.is-active { background: #d1fae5; color: #065f46; }
+    .cdh-site-tag.is-new    { background: #fef3c7; color: #92400e; }
+
+    .cdh-actions-bar {
+        padding: 1.25rem 2rem;
+        border-top: 1px solid var(--border-color, #e8e9ff);
+        background: var(--bg-hover, #f8f9ff);
+        display: flex; gap: 0.75rem; flex-wrap: wrap;
+    }
+
+    /* Recent backups feed */
+    .cdh-feed-row {
+        display: flex; align-items: center; gap: 0.875rem;
+        padding: 0.875rem 2rem;
         border-bottom: 1px solid var(--border-light, #f3f4f6);
     }
-    
-    .gdrive-table tbody tr:hover {
-        background: var(--bg-secondary, #f8f9ff);
+    .cdh-feed-row:last-child { border-bottom: none; }
+    .cdh-status-dot {
+        flex-shrink: 0;
+        width: 10px; height: 10px; border-radius: 50%;
     }
-    
-    .gdrive-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-    
-    .frequency-badge {
-        background: var(--accent-light, #e0e7ff);
-        color: #5b5fcf;
-        padding: 0.25rem 0.75rem;
-        border-radius: 6px;
+    .cdh-status-dot.ok   { background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+    .cdh-status-dot.warn { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+    .cdh-status-dot.fail { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+    .cdh-feed-info { flex: 1; min-width: 0; }
+    .cdh-feed-info .domain {
         font-size: 0.875rem;
+        color: var(--text-primary, #1e293b);
         font-weight: 500;
     }
-    
-    .retention-info {
-        background: var(--warning-light, #fef3c7);
-        border: 1px solid var(--warning-border, #fde68a);
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+    .cdh-feed-info .meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #94a3b8);
+        margin-top: 0.125rem;
     }
-    
-    .retention-info i {
-        color: #f59e0b;
-        font-size: 1.25rem;
-    }
-    
-    .retention-info p {
-        margin: 0;
-        color: var(--warning-text, #92400e);
-        font-size: 0.875rem;
-    }
-    
-    .retention-info a {
-        color: #5b5fcf;
-        font-weight: 600;
-        text-decoration: none;
-    }
-    
-    .retention-info a:hover {
-        text-decoration: underline;
-    }
-    
-    .loading-spinner {
-        width: 20px;
-        height: 20px;
-        border: 3px solid var(--border-primary, #e8e9ff);
-        border-top-color: #5b5fcf;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        display: inline-block;
-        margin-left: 1rem;
-    }
-    
-    .modal-content {
-        border-radius: 16px;
-        overflow: hidden;
-        border: none;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    }
-    
-    .modal-header {
-        background: linear-gradient(135deg, var(--bg-secondary, #f8f9ff) 0%, var(--bg-hover, #f0f1ff) 100%);
-        border-bottom: 1px solid var(--border-primary, #e8e9ff);
-        padding: 1.5rem 2rem;
-    }
-    
-    .modal-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-primary, #1e293b);
-        margin: 0;
-    }
-    
-    .modal-body {
-        padding: 2rem;
-    }
-    
-    .modal-footer {
-        border-top: 1px solid var(--border-primary, #e8e9ff);
-        padding: 1.5rem 2rem;
-        background: var(--bg-secondary, #f8f9ff);
-    }
-    
-    .log-table {
-        width: 100%;
-        background: var(--bg-secondary, #f8f9ff);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .log-table th {
-        background: var(--bg-hover, #e8e9ff);
-        padding: 0.75rem;
-        text-align: left;
-        font-weight: 600;
-        color: var(--text-primary, #1e293b);
-        font-size: 0.875rem;
-    }
-    
-    .log-table td {
-        padding: 0.75rem;
+    .cdh-feed-size {
+        font-size: 0.8125rem;
         color: var(--text-secondary, #64748b);
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+
+    /* Toast */
+    .cdh-toast {
+        position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050;
+        background: var(--text-primary, #1e293b);
+        color: white;
+        border-radius: 10px;
+        padding: 0.875rem 1.25rem;
+        min-width: 240px;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+        display: flex; gap: 0.625rem; align-items: center;
+        transform: translateY(20px); opacity: 0; pointer-events: none;
+        transition: all .25s ease;
         font-size: 0.875rem;
-        border-bottom: 1px solid var(--border-primary, #e8e9ff);
     }
-    
-    .log-type {
-        font-weight: 600;
-        color: #5b5fcf;
+    .cdh-toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    .cdh-toast .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #5b5fcf;
+        animation: cdh-pulse 1.4s ease-in-out infinite;
+        flex-shrink: 0;
     }
-    
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+
+    /* Spinner */
+    .cdh-spin {
+        display: inline-block;
+        width: 14px; height: 14px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: cdh-spin 0.8s linear infinite;
     }
-    
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+
+    /* State swap */
+    .cdh-state { display: none; animation: cdh-fadeInUp 0.4s ease-out; }
+    .cdh-state.is-active { display: block; }
+
+    /* Animations */
+    @keyframes cdh-fadeInDown {
+        from { opacity: 0; transform: translateY(-15px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
-    
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    @keyframes cdh-fadeInUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
-    
-    @media (max-width: 768px) {
-        .page-title {
-            font-size: 2rem;
-        }
-        
-        .google-drive-icon {
-            width: 48px;
-            height: 48px;
-        }
+    @keyframes cdh-spin { to { transform: rotate(360deg); } }
+    @keyframes cdh-pulse {
+        50% { box-shadow: 0 0 0 5px rgba(91, 95, 207, 0.18); }
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .cdh-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .cdh-grid-2 { grid-template-columns: 1fr; }
+        .cdh-plan-grid { grid-template-columns: 1fr; }
+        .cdh-hero-bullets { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 576px) {
+        .cdh-modern-container { padding: 1rem; }
+        .cdh-page-title { font-size: 1.625rem; }
+        .cdh-card-body { padding: 1.25rem; }
+        .cdh-stats { grid-template-columns: 1fr; }
+        .cdh-actions-bar, .cdh-site-row, .cdh-feed-row { padding-left: 1.25rem; padding-right: 1.25rem; }
     }
 </style>
 
-<div class="modern-container" ng-controller="googleDrive">
-    <div class="page-header">
-        <h1 class="page-title">
-            <div class="google-drive-icon">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" 
-                     alt="Google Drive" style="width: 36px; height: 36px;">
-            </div>
-            {% trans "Google Drive Backups" %}
+<div class="cdh-modern-container">
+
+    <!-- Header -->
+    <div class="cdh-page-header">
+        <h1 class="cdh-page-title">
+            <i class="fas fa-cloud-upload-alt"></i>
+            {% trans "Codedhost Backup" %}
         </h1>
-        <p class="page-subtitle">{% trans "Set up and manage automatic backups to Google Drive" %}</p>
-        <div class="header-actions">
-            <a href="https://cyberpanel.net/docs/backup-to-google-drive/" 
-               target="_blank" 
-               rel="noopener"
-               class="btn-secondary">
-                <i class="fas fa-book"></i>
-                {% trans "Documentation" %}
-            </a>
-            <button type="button" class="btn-primary" data-toggle="modal" data-target="#setupGdrive">
-                <i class="fas fa-plus-circle"></i>
-                {% trans "Setup New Account" %}
-            </button>
+        <p class="cdh-page-subtitle" id="cdh-header-sub">
+            {% trans "Off-site cloud backups for every site on this server." %}
+        </p>
+        <div class="cdh-brand-mark">Powered by Codedhost · R2-encrypted</div>
+
+        <!-- Preview state switcher (REMOVE on lock-in) -->
+        <div style="margin-top: 1.25rem;">
+            <span id="cdh-status-pill" class="cdh-status-pill is-on" style="margin-right: 0.5rem;">
+                <span class="dot"></span>
+                <span id="cdh-status-pill-txt">Connected · Basic plan</span>
+            </span>
+        </div>
+        <div class="cdh-preview-pills" role="tablist">
+            <button class="cdh-preview-pill" data-state="A">A · Not connected</button>
+            <button class="cdh-preview-pill" data-state="B">B · No plan yet</button>
+            <button class="cdh-preview-pill" data-state="C">C · Active plan</button>
         </div>
     </div>
 
-    <!-- Main Configuration Card -->
-    <div class="main-card">
-        <div class="card-header">
-            <h2 class="card-title">
-                <i class="fas fa-cog"></i>
-                {% trans "Google Drive Backup Configuration" %}
-                <span ng-hide="cyberPanelLoading" class="loading-spinner"></span>
-            </h2>
-        </div>
-        <div class="card-body">
-            <!-- Account Selector -->
-            <div class="account-selector">
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-user-circle" style="margin-right: 0.5rem;"></i>
-                        {% trans "Select Google Drive Account" %}
-                    </label>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <select ng-change="fetchWebsites()" ng-model="selectedAccount" class="form-control">
-                            <option value="">{% trans "Choose an account..." %}</option>
-                            {% for items in accounts %}
-                                <option>{{ items }}</option>
-                            {% endfor %}
-                        </select>
-                        <button ng-hide="driveHidden" type="button" ng-click="deleteAccount()" class="btn-danger">
-                            <i class="fas fa-trash"></i>
-                            {% trans "Delete" %}
-                        </button>
+    <!-- ═══════════════════════════════════════════════════════════════
+         STATE A — NOT CONNECTED
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="cdh-state" data-state="A">
+        <div class="cdh-card">
+            <div class="cdh-card-body" style="padding: 2.5rem;">
+                <div class="cdh-hero">
+                    <div class="cdh-hero-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="cdh-hero-body">
+                        <h2>{% trans "Connect this server to Codedhost" %}</h2>
+                        <p>{% trans "Encrypted, off-site backups for every site on this CyberPanel — managed in one place. Free plan included; paid plans for longer retention and bigger storage." %}</p>
+                        <a href="#" class="cdh-btn-primary" onclick="return cdhFakeRedirect(event)">
+                            <i class="fas fa-link"></i>
+                            {% trans "Connect Codedhost Account" %}
+                        </a>
+                        <ul class="cdh-hero-bullets">
+                            <li><i class="fas fa-check-circle"></i> {% trans "Auto-discovers every site you own" %}</li>
+                            <li><i class="fas fa-check-circle"></i> {% trans "Daily / weekly / monthly tiers" %}</li>
+                            <li><i class="fas fa-check-circle"></i> {% trans "Restore in one click" %}</li>
+                            <li><i class="fas fa-check-circle"></i> {% trans "Telegram + email alerts" %}</li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <!-- Backup Settings -->
-            <div ng-hide="driveHidden">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-sync-alt" style="margin-right: 0.5rem;"></i>
-                                {% trans "Backup Frequency" %}
-                            </label>
-                            <select ng-change="changeFrequency()" ng-model="backupFrequency" class="form-control">
-                                <option>Never</option>
-                                <option>Daily</option>
-                                <option>Weekly</option>
-                            </select>
-                            <small class="form-text text-muted" style="margin-top: 0.5rem;">
-                                {% trans "Currently" %}: <span class="frequency-badge">{$ currently $}</span>
-                            </small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-history" style="margin-right: 0.5rem;"></i>
-                                {% trans "Backup File Retention" %}
-                            </label>
-                            <select id="fileretention" ng-model="Retentiontime" ng-change="changeRetention()" class="form-control">
-                                <option value="1d">1 day</option>
-                                <option value="1w">1 week</option>
-                                <option value="1m">1 month</option>
-                                <option value="6m">6 months</option>
-                            </select>
-                        </div>
-                    </div>
+    <!-- ═══════════════════════════════════════════════════════════════
+         STATE B — CONNECTED, NO PLAN
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="cdh-state" data-state="B">
+        <div class="cdh-plan-grid">
+            <div class="cdh-plan" onclick="cdhPickPlan(this)">
+                <div class="cdh-plan-name">Free</div>
+                <div class="cdh-plan-price">$0<span class="cycle">/forever</span></div>
+                <ul class="cdh-plan-feats">
+                    <li><i class="fas fa-check"></i> 2 GB storage</li>
+                    <li><i class="fas fa-check"></i> 5 days retention</li>
+                    <li><i class="fas fa-check"></i> 1 backup per day</li>
+                    <li><i class="fas fa-check"></i> Self-restore</li>
+                </ul>
+                <button class="cdh-btn-secondary" type="button">Start free</button>
+            </div>
+
+            <div class="cdh-plan is-recommended" onclick="cdhPickPlan(this)">
+                <div class="cdh-plan-badge">Recommended</div>
+                <div class="cdh-plan-name">Basic</div>
+                <div class="cdh-plan-price">$5<span class="cycle">/mo</span></div>
+                <ul class="cdh-plan-feats">
+                    <li><i class="fas fa-check"></i> 10 GB storage</li>
+                    <li><i class="fas fa-check"></i> 14 days retention</li>
+                    <li><i class="fas fa-check"></i> 1 backup per day</li>
+                    <li><i class="fas fa-check"></i> Telegram alerts</li>
+                </ul>
+                <button class="cdh-btn-primary" type="button">Activate Basic</button>
+            </div>
+
+            <div class="cdh-plan" onclick="cdhPickPlan(this)">
+                <div class="cdh-plan-name">Pro</div>
+                <div class="cdh-plan-price">$15<span class="cycle">/mo</span></div>
+                <ul class="cdh-plan-feats">
+                    <li><i class="fas fa-check"></i> 50 GB storage</li>
+                    <li><i class="fas fa-check"></i> 30 days retention</li>
+                    <li><i class="fas fa-check"></i> 3 backups per day</li>
+                    <li><i class="fas fa-check"></i> Auto-rotate when full</li>
+                </ul>
+                <button class="cdh-btn-secondary" type="button">Activate Pro</button>
+            </div>
+        </div>
+        <p style="text-align:center; font-size:0.8125rem; color: var(--text-secondary, #64748b); margin-top: 1rem;">
+            <i class="fas fa-lock" style="margin-right: 0.4rem; color: #94a3b8;"></i>
+            Pay with crypto (Cryptomus) or manual bank transfer. Cancel anytime.
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         STATE C — ACTIVE PLAN
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="cdh-state" data-state="C">
+
+        <!-- Stats row -->
+        <div class="cdh-stats">
+            <div class="cdh-stat">
+                <div class="label">Plan</div>
+                <div class="value" data-cdh="plan-name">—</div>
+                <div class="meta" data-cdh="plan-meta">—</div>
+            </div>
+            <div class="cdh-stat">
+                <div class="label">Storage</div>
+                <div class="value"><span data-cdh="storage-value">—</span><span class="light" data-cdh="storage-limit"></span></div>
+                <div class="meta" data-cdh="storage-meta">—</div>
+            </div>
+            <div class="cdh-stat">
+                <div class="label">Sites</div>
+                <div class="value"><span data-cdh="sites-total">—</span><span class="light">total</span></div>
+                <div class="meta" data-cdh="sites-rotation">—</div>
+            </div>
+            <div class="cdh-stat">
+                <div class="label">Last backup</div>
+                <div class="value" style="font-size: 1.125rem;" data-cdh="last-backup">—</div>
+                <div class="meta ok"><i class="fas fa-check-circle"></i> All sites OK</div>
+            </div>
+        </div>
+
+        <!-- Storage usage card -->
+        <div class="cdh-card">
+            <div class="cdh-card-header">
+                <h3 class="cdh-card-title"><i class="fas fa-database"></i> Storage usage</h3>
+                <a href="#" class="cdh-btn-secondary cdh-btn-sm" onclick="return false"><i class="fas fa-arrow-up"></i> Upgrade plan</a>
+            </div>
+            <div class="cdh-card-body">
+                <div class="cdh-quota-head">
+                    <h4 data-cdh="quota-headline">— used of —</h4>
+                    <span class="pct" data-cdh="quota-pct"><b>—</b></span>
                 </div>
-
-                <!-- Retention Info -->
-                <div class="retention-info">
-                    <i class="fas fa-info-circle"></i>
-                    <p>
-                        {% trans "Backup retention is a" %} 
-                        <a href="https://cyberpanel.net/cyberpanel-addons" target="_blank" rel="noopener">{% trans "paid feature" %}</a>. 
-                        {% trans "Upgrade to manage how long backups are stored." %}
-                    </p>
-                </div>
-
-                <!-- Site Management -->
-                <div class="form-section">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-globe" style="margin-right: 0.5rem;"></i>
-                            {% trans "Add Sites for Backup" %}
-                        </label>
-                        <div style="display: flex; gap: 1rem; align-items: center;">
-                            <select ng-model="selectedWebsite" class="form-control">
-                                <option value="">{% trans "Choose a website..." %}</option>
-                                {% for items in websites %}
-                                    <option>{{ items }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="button" ng-click="addSite()" class="btn-primary">
-                                <i class="fas fa-plus"></i>
-                                {% trans "Add Site" %}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <button data-toggle="modal" data-target="#backupLogs" 
-                            type="button" ng-click="fetchLogs()" class="btn-gray">
-                        <i class="fas fa-file-alt"></i>
-                        {% trans "View Logs" %}
-                    </button>
-                    <select ng-model="recordsToShow" ng-change="fetchWebsites()" 
-                            class="form-control" style="width: auto;">
-                        <option>10</option>
-                        <option>50</option>
-                        <option>100</option>
-                    </select>
-                </div>
-
-                <!-- Sites Table -->
-                <table class="gdrive-table">
-                    <thead>
-                        <tr>
-                            <th>{% trans "Website" %}</th>
-                            <th style="text-align: center;">{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat="website in websites track by $index">
-                            <td>
-                                <i class="fas fa-globe" style="color: #5b5fcf; margin-right: 0.5rem;"></i>
-                                <strong ng-bind="website.name"></strong>
-                            </td>
-                            <td style="text-align: center;">
-                                <button type="button" ng-click="deleteSite(website.name)" class="btn-danger">
-                                    <i class="fas fa-times"></i>
-                                    {% trans "Remove" %}
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div style="display: flex; justify-content: center; margin-top: 2rem;">
-                    <select ng-model="currentPage" class="form-control" 
-                            ng-change="fetchWebsites()" style="width: auto;">
-                        <option ng-repeat="page in pagination">{$ $index + 1 $}</option>
-                    </select>
+                <div class="cdh-quota-bar"><div class="cdh-quota-fill" style="width: 0%" data-cdh="quota-fill"></div></div>
+                <div class="cdh-quota-foot">
+                    <span class="breakdown">Resets daily · oldest backups auto-rotate when full</span>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Setup Account Modal -->
-    <div id="setupGdrive" class="modal fade" role="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">
-                        <i class="fas fa-user-plus" style="margin-right: 0.5rem;"></i>
-                        {% trans "Set up Google Drive Account" %}
-                    </h4>
-                    <button type="button" class="close" data-dismiss="modal" style="font-size: 1.5rem;">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form name="containerSettingsForm" action="/" method="post">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-tag" style="margin-right: 0.5rem;"></i>
-                                {% trans "Account Name" %}
-                            </label>
-                            <input name="accountName" type="text" class="form-control" 
-                                   ng-model="accountName" 
-                                   placeholder="{% trans 'e.g., My Google Drive Backup' %}" required>
-                            <small class="form-text text-muted">
-                                {% trans "Choose a descriptive name for this Google Drive account" %}
-                            </small>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times"></i>
-                        {% trans "Cancel" %}
+        <div class="cdh-grid-2">
+
+            <!-- Sites card -->
+            <div class="cdh-card">
+                <div class="cdh-card-header">
+                    <h3 class="cdh-card-title">
+                        <i class="fas fa-globe"></i> Your sites
+                        <span style="font-size:0.75rem;font-weight:500;color:var(--text-secondary, #64748b);" id="cdh-sel-count">3 selected</span>
+                    </h3>
+                    <button class="cdh-btn-secondary cdh-btn-sm" type="button" onclick="cdhToggleAll()">
+                        <i class="fas fa-check-double"></i> Toggle all
                     </button>
-                    <button type="button" class="btn-primary" ng-click="setupAccount()">
-                        <i class="fas fa-check"></i>
-                        {% trans "Continue Setup" %}
-                        <span ng-hide="cyberPanelLoading" class="loading-spinner" style="width: 16px; height: 16px;"></span>
+                </div>
+                <div class="cdh-card-body tight">
+                    <div id="cdh-sites-list"></div>
+                </div>
+                <div class="cdh-actions-bar">
+                    <button class="cdh-btn-primary" type="button" onclick="cdhRunBackup(this)">
+                        <i class="fas fa-cloud-upload-alt"></i> Backup selected now
+                    </button>
+                    <button class="cdh-btn-secondary" type="button">
+                        <i class="fas fa-clock"></i> Schedule
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Logs Modal -->
-    <div id="backupLogs" class="modal fade" role="dialog">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">
-                        <i class="fas fa-file-alt" style="margin-right: 0.5rem;"></i>
-                        {% trans "Backup Logs" %}
-                        <span ng-hide="cyberPanelLoading" class="loading-spinner" style="width: 16px; height: 16px;"></span>
-                    </h4>
-                    <button type="button" class="close" data-dismiss="modal" style="font-size: 1.5rem;">&times;</button>
+            <!-- Recent backups feed -->
+            <div class="cdh-card">
+                <div class="cdh-card-header">
+                    <h3 class="cdh-card-title"><i class="fas fa-history"></i> Recent backups</h3>
+                    <a href="#" class="cdh-btn-secondary cdh-btn-sm" onclick="return false">View all</a>
                 </div>
-                <div class="modal-body">
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-                        <select ng-model="recordsToShowLogs" ng-change="fetchLogs()" 
-                                class="form-control" style="width: auto;">
-                            <option>10</option>
-                            <option>50</option>
-                            <option>100</option>
-                        </select>
+                <div class="cdh-card-body tight">
+                    <div class="cdh-feed-row">
+                        <span class="cdh-status-dot ok"></span>
+                        <div class="cdh-feed-info">
+                            <div class="domain">acme.com</div>
+                            <div class="meta">daily · 2h ago · success</div>
+                        </div>
+                        <div class="cdh-feed-size">2.4 GB</div>
                     </div>
-
-                    <table class="log-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 100px;">{% trans "Type" %}</th>
-                                <th>{% trans "Message" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="log in logs track by $index">
-                                <td class="log-type" ng-bind="log.type"></td>
-                                <td ng-bind="log.message"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div style="display: flex; justify-content: center; margin-top: 2rem;">
-                        <select ng-model="currentPageLogs" class="form-control" 
-                                ng-change="fetchLogs()" style="width: auto;">
-                            <option ng-repeat="page in paginationLogs">{$ $index + 1 $}</option>
-                        </select>
+                    <div class="cdh-feed-row">
+                        <span class="cdh-status-dot ok"></span>
+                        <div class="cdh-feed-info">
+                            <div class="domain">blog.acme.com</div>
+                            <div class="meta">daily · 2h ago · success</div>
+                        </div>
+                        <div class="cdh-feed-size">132 MB</div>
+                    </div>
+                    <div class="cdh-feed-row">
+                        <span class="cdh-status-dot ok"></span>
+                        <div class="cdh-feed-info">
+                            <div class="domain">shop.acme.com</div>
+                            <div class="meta">daily · 2h ago · success</div>
+                        </div>
+                        <div class="cdh-feed-size">1.6 GB</div>
+                    </div>
+                    <div class="cdh-feed-row">
+                        <span class="cdh-status-dot fail"></span>
+                        <div class="cdh-feed-info">
+                            <div class="domain">test.acme.com</div>
+                            <div class="meta">weekly · yesterday · auth error</div>
+                        </div>
+                        <div class="cdh-feed-size">—</div>
+                    </div>
+                    <div class="cdh-feed-row">
+                        <span class="cdh-status-dot ok"></span>
+                        <div class="cdh-feed-info">
+                            <div class="domain">acme.com</div>
+                            <div class="meta">weekly · 3 days ago · success</div>
+                        </div>
+                        <div class="cdh-feed-size">2.2 GB</div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+
 </div>
+
+<div id="cdh-toast" class="cdh-toast">
+    <span class="dot"></span>
+    <span class="msg">Backup queued for 3 sites…</span>
+</div>
+
+<script>
+(function(){
+    const sections   = document.querySelectorAll('.cdh-state');
+    const pills      = document.querySelectorAll('.cdh-preview-pill');
+    const headerSub  = document.getElementById('cdh-header-sub');
+    const statusPill = document.getElementById('cdh-status-pill');
+    const statusTxt  = document.getElementById('cdh-status-pill-txt');
+
+    let SERVER_STATE = null;   // populated from /backup/cdh/status
+
+    const META = {
+        A: { sub: "Connect this server to Codedhost to enable cloud backups.", cls:'is-off', txt:'Not connected' },
+        B: { sub: "Choose a plan to activate cloud backups.",                  cls:'is-on',  txt:'Connected · No plan' },
+        C: { sub: "Off-site cloud backups for every site on this server.",     cls:'is-on',  txt:'Connected' },
+    };
+    function setState(name, statusOverride) {
+        sections.forEach(s => s.classList.toggle('is-active', s.dataset.state === name));
+        pills.forEach(p => p.classList.toggle('is-active', p.dataset.state === name));
+        const m = META[name] || META.A;
+        headerSub.textContent = m.sub;
+        statusPill.classList.toggle('is-on',  m.cls === 'is-on');
+        statusPill.classList.toggle('is-off', m.cls === 'is-off');
+        statusTxt.textContent = statusOverride || m.txt;
+    }
+    pills.forEach(p => p.addEventListener('click', () => setState(p.dataset.state)));
+
+    // ─── Fetch real state from Laravel (proxied through Django) ──────────
+    function applyServerState(s) {
+        SERVER_STATE = s;
+        const stateName = s && s.state ? s.state : 'A';
+        let statusTxt = null;
+        if (s && s.linked && s.plan && s.plan.name) {
+            statusTxt = `Connected · ${s.plan.name} plan`;
+        } else if (s && s.linked) {
+            statusTxt = `Connected · No plan`;
+        }
+        setState(stateName, statusTxt);
+
+        // If we got real plan/quota data, paint State C with it
+        if (stateName === 'C' && s && s.plan && s.quota) {
+            paintActiveState(s);
+        }
+    }
+
+    function paintActiveState(s) {
+        const usedMb  = (s.quota.used_bytes  || 0) / (1024*1024);
+        const limitMb = (s.quota.limit_bytes || 1) / (1024*1024);
+        const pct = Math.min(100, Math.round((usedMb / limitMb) * 100));
+
+        // Stats
+        document.querySelectorAll('[data-cdh="plan-name"]').forEach(el => el.textContent = s.plan.name);
+        document.querySelectorAll('[data-cdh="plan-meta"]').forEach(el =>
+            el.textContent = `${s.plan.storage_limit_mb >= 1024 ? (s.plan.storage_limit_mb/1024).toFixed(0)+' GB' : s.plan.storage_limit_mb+' MB'} · ${s.plan.retention_days} day retention`);
+        document.querySelectorAll('[data-cdh="storage-value"]').forEach(el =>
+            el.textContent = humanBytes(s.quota.used_bytes || 0));
+        document.querySelectorAll('[data-cdh="storage-limit"]').forEach(el =>
+            el.textContent = '/ ' + humanBytes(s.quota.limit_bytes || 0));
+        document.querySelectorAll('[data-cdh="storage-meta"]').forEach(el =>
+            el.textContent = pct + '% used');
+        document.querySelectorAll('[data-cdh="sites-total"]').forEach(el => el.textContent = s.quota.sites_total ?? 0);
+        document.querySelectorAll('[data-cdh="sites-rotation"]').forEach(el =>
+            el.textContent = (s.quota.sites_in_rotation ?? 0) + ' in rotation');
+        document.querySelectorAll('[data-cdh="last-backup"]').forEach(el =>
+            el.textContent = s.last_backup_at ? relTime(s.last_backup_at) : 'never');
+
+        // Quota bar
+        document.querySelectorAll('[data-cdh="quota-fill"]').forEach(el => el.style.width = pct + '%');
+        document.querySelectorAll('[data-cdh="quota-headline"]').forEach(el =>
+            el.textContent = `${humanBytes(s.quota.used_bytes||0)} used of ${humanBytes(s.quota.limit_bytes||0)}`);
+        document.querySelectorAll('[data-cdh="quota-pct"]').forEach(el => el.innerHTML = `<b>${pct}%</b> · ${humanBytes(Math.max(0,(s.quota.limit_bytes||0)-(s.quota.used_bytes||0)))} free`);
+    }
+
+    function humanBytes(n) {
+        if (!n) return '0 B';
+        const u = ['B','KB','MB','GB','TB'];
+        const i = Math.min(u.length-1, Math.floor(Math.log(n)/Math.log(1024)));
+        return (n/Math.pow(1024,i)).toFixed(i?1:0) + ' ' + u[i];
+    }
+    function relTime(iso) {
+        const t = new Date(iso).getTime();
+        const s = Math.floor((Date.now()-t)/1000);
+        if (s < 60)     return 'just now';
+        if (s < 3600)   return Math.floor(s/60) + 'm ago';
+        if (s < 86400)  return Math.floor(s/3600) + 'h ago';
+        return Math.floor(s/86400) + 'd ago';
+    }
+
+    // Kick off the fetch on load. If it fails, fall back to State A.
+    fetch('/backup/cdh/status', { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(applyServerState)
+        .catch(() => setState('A', 'Bridge offline'));
+
+    const SITES = [
+        { domain: 'acme.com',         size: '2.4 GB', status: 'in_rotation',  selected: true  },
+        { domain: 'blog.acme.com',    size: '132 MB', status: 'in_rotation',  selected: true  },
+        { domain: 'shop.acme.com',    size: '1.6 GB', status: 'in_rotation',  selected: true  },
+        { domain: 'test.acme.com',    size: '—',      status: 'never_backed', selected: false },
+        { domain: 'staging.acme.com', size: '—',      status: 'new',          selected: false },
+        { domain: 'docs.acme.com',    size: '—',      status: 'new',          selected: false },
+    ];
+    const list = document.getElementById('cdh-sites-list');
+    const selCount = document.getElementById('cdh-sel-count');
+
+    function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function renderSites() {
+        list.innerHTML = SITES.map((s, i) => `
+            <div class="cdh-site-row ${s.status === 'new' ? 'is-new' : ''}" data-i="${i}">
+                <div class="cdh-checkbox ${s.selected ? 'is-checked' : ''}">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="cdh-site-info">
+                    <div class="domain">${esc(s.domain)}</div>
+                    <div class="meta">${s.status === 'in_rotation' ? `Last: 2h ago · ${esc(s.size)}` : (s.status === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up')}</div>
+                </div>
+                <span class="cdh-site-tag ${s.status === 'in_rotation' ? 'is-active' : 'is-new'}">
+                    ${s.status === 'in_rotation' ? 'Active' : 'New'}
+                </span>
+            </div>
+        `).join('');
+        list.querySelectorAll('.cdh-site-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const i = +row.dataset.i;
+                SITES[i].selected = !SITES[i].selected;
+                renderSites();
+            });
+        });
+        selCount.textContent = `${SITES.filter(s => s.selected).length} selected`;
+    }
+    renderSites();
+
+    window.cdhToggleAll = function() {
+        const allOn = SITES.every(s => s.selected);
+        SITES.forEach(s => s.selected = !allOn);
+        renderSites();
+    };
+
+    window.cdhPickPlan = function(el) {
+        document.querySelectorAll('.cdh-plan').forEach(p => p.classList.remove('is-recommended'));
+        el.classList.add('is-recommended');
+        toast(`Selected ${el.querySelector('.cdh-plan-name').textContent} — checkout on Codedhost storefront`);
+    };
+
+    window.cdhRunBackup = function(btn) {
+        const n = SITES.filter(s => s.selected).length;
+        if (!n) { toast('Select at least one site first.'); return; }
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="cdh-spin"></span> Queueing…';
+        toast(`Backup queued for ${n} site${n>1?'s':''}…`);
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            toast(`Backup started — you'll be notified when complete.`);
+        }, 1800);
+    };
+
+    window.cdhFakeRedirect = function(e) {
+        e.preventDefault();
+        toast('Would redirect to https://codedhost.vip/oauth/cp-link');
+        return false;
+    };
+
+    const toastEl = document.getElementById('cdh-toast');
+    let toastTimer;
+    function toast(msg) {
+        toastEl.querySelector('.msg').textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+    }
+})();
+</script>
 
 {% endblock %}

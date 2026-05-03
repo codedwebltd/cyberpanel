@@ -1,7 +1,11 @@
 from django.urls import re_path
 from . import views
+from . import codedhost_bridge  # Codedhost CP↔Laravel bridge (override-installed)
 
 urlpatterns = [
+    # Codedhost backup (browser → Django proxy → Laravel /api/cp/*)
+    re_path(r'^cdh/status$', codedhost_bridge.cdh_status, name='cdhStatus'),
+
     re_path(r'^$', views.loadBackupHome, name='loadBackupHome'),
     re_path(r'^getCurrentBackups$', views.getCurrentBackups, name='getCurrentBackups'),
     re_path(r'^OneClickBackups$', views.OneClickBackups, name='OneClickBackups'),
