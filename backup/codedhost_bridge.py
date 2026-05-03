@@ -93,3 +93,27 @@ def cdh_status(request):
     admin = (request.user.username or '').strip()
     code, data = _post('/api/cp/status', admin, body={})
     return JsonResponse(data, status=code, safe=False)
+
+
+@login_required
+def cdh_oauth_link(request):
+    """
+    GET /backup/cdh/oauth-link
+    Returns { url } pointing at Laravel /oauth/cp-server-link with an HMAC-signed
+    query string. Browser navigates to it from the State A "Connect" button.
+    """
+    if not _is_configured():
+        return JsonResponse({'error': 'codedhost_bridge_not_configured'}, status=503)
+
+    server = _CFG['CDH_CP_SERVER']
+    admin  = (request.user.username or '').strip()
+    if not admin:
+        return JsonResponse({'error': 'no_cp_username'}, status=400)
+
+    ts = int(time.time())
+    msg = f"{server}|{admin}|{ts}".encode()
+    sig = hmac.new(_CFG['CDH_API_SECRET'].encode(), msg, hashlib.sha256).hexdigest()
+
+    base = _CFG['CDH_API_BASE'].rstrip('/') + '/oauth/cp-server-link'
+    url  = f"{base}?cp_server={server}&cp_admin={admin}&cp_ts={ts}&cp_sig={sig}"
+    return JsonResponse({'url': url})

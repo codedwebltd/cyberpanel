@@ -595,8 +595,8 @@
                     </div>
                     <div class="cdh-hero-body">
                         <h2>{% trans "Connect this server to Codedhost" %}</h2>
-                        <p>{% trans "Encrypted, off-site backups for every site on this CyberPanel — managed in one place. Free plan included; paid plans for longer retention and bigger storage." %}</p>
-                        <a href="#" class="cdh-btn-primary" onclick="return cdhFakeRedirect(event)">
+                        <p>{% trans "Encrypted, off-site backups for every site on this server — managed by Codedhost. Free plan included; paid plans for longer retention and bigger storage." %}</p>
+                        <a href="#" id="cdh-connect-btn" class="cdh-btn-primary" onclick="return cdhConnect(event)">
                             <i class="fas fa-link"></i>
                             {% trans "Connect Codedhost Account" %}
                         </a>
@@ -616,43 +616,9 @@
          STATE B — CONNECTED, NO PLAN
          ═══════════════════════════════════════════════════════════════ -->
     <section class="cdh-state" data-state="B">
-        <div class="cdh-plan-grid">
-            <div class="cdh-plan" onclick="cdhPickPlan(this)">
-                <div class="cdh-plan-name">Free</div>
-                <div class="cdh-plan-price">$0<span class="cycle">/forever</span></div>
-                <ul class="cdh-plan-feats">
-                    <li><i class="fas fa-check"></i> 2 GB storage</li>
-                    <li><i class="fas fa-check"></i> 5 days retention</li>
-                    <li><i class="fas fa-check"></i> 1 backup per day</li>
-                    <li><i class="fas fa-check"></i> Self-restore</li>
-                </ul>
-                <button class="cdh-btn-secondary" type="button">Start free</button>
-            </div>
-
-            <div class="cdh-plan is-recommended" onclick="cdhPickPlan(this)">
-                <div class="cdh-plan-badge">Recommended</div>
-                <div class="cdh-plan-name">Basic</div>
-                <div class="cdh-plan-price">$5<span class="cycle">/mo</span></div>
-                <ul class="cdh-plan-feats">
-                    <li><i class="fas fa-check"></i> 10 GB storage</li>
-                    <li><i class="fas fa-check"></i> 14 days retention</li>
-                    <li><i class="fas fa-check"></i> 1 backup per day</li>
-                    <li><i class="fas fa-check"></i> Telegram alerts</li>
-                </ul>
-                <button class="cdh-btn-primary" type="button">Activate Basic</button>
-            </div>
-
-            <div class="cdh-plan" onclick="cdhPickPlan(this)">
-                <div class="cdh-plan-name">Pro</div>
-                <div class="cdh-plan-price">$15<span class="cycle">/mo</span></div>
-                <ul class="cdh-plan-feats">
-                    <li><i class="fas fa-check"></i> 50 GB storage</li>
-                    <li><i class="fas fa-check"></i> 30 days retention</li>
-                    <li><i class="fas fa-check"></i> 3 backups per day</li>
-                    <li><i class="fas fa-check"></i> Auto-rotate when full</li>
-                </ul>
-                <button class="cdh-btn-secondary" type="button">Activate Pro</button>
-            </div>
+        <div class="cdh-plan-grid" id="cdh-plan-grid">
+            <!-- Populated from /api/cp/status response.plans -->
+            <div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-secondary,#64748b); font-size:.875rem;">Loading plans…</div>
         </div>
         <p style="text-align:center; font-size:0.8125rem; color: var(--text-secondary, #64748b); margin-top: 1rem;">
             <i class="fas fa-lock" style="margin-right: 0.4rem; color: #94a3b8;"></i>
@@ -721,7 +687,9 @@
                     </button>
                 </div>
                 <div class="cdh-card-body tight">
-                    <div id="cdh-sites-list"></div>
+                    <div id="cdh-sites-list">
+                        <div style="padding:2rem; text-align:center; color:var(--text-secondary,#64748b); font-size:.8125rem;">Loading sites…</div>
+                    </div>
                 </div>
                 <div class="cdh-actions-bar">
                     <button class="cdh-btn-primary" type="button" onclick="cdhRunBackup(this)">
@@ -740,45 +708,8 @@
                     <a href="#" class="cdh-btn-secondary cdh-btn-sm" onclick="return false">View all</a>
                 </div>
                 <div class="cdh-card-body tight">
-                    <div class="cdh-feed-row">
-                        <span class="cdh-status-dot ok"></span>
-                        <div class="cdh-feed-info">
-                            <div class="domain">acme.com</div>
-                            <div class="meta">daily · 2h ago · success</div>
-                        </div>
-                        <div class="cdh-feed-size">2.4 GB</div>
-                    </div>
-                    <div class="cdh-feed-row">
-                        <span class="cdh-status-dot ok"></span>
-                        <div class="cdh-feed-info">
-                            <div class="domain">blog.acme.com</div>
-                            <div class="meta">daily · 2h ago · success</div>
-                        </div>
-                        <div class="cdh-feed-size">132 MB</div>
-                    </div>
-                    <div class="cdh-feed-row">
-                        <span class="cdh-status-dot ok"></span>
-                        <div class="cdh-feed-info">
-                            <div class="domain">shop.acme.com</div>
-                            <div class="meta">daily · 2h ago · success</div>
-                        </div>
-                        <div class="cdh-feed-size">1.6 GB</div>
-                    </div>
-                    <div class="cdh-feed-row">
-                        <span class="cdh-status-dot fail"></span>
-                        <div class="cdh-feed-info">
-                            <div class="domain">test.acme.com</div>
-                            <div class="meta">weekly · yesterday · auth error</div>
-                        </div>
-                        <div class="cdh-feed-size">—</div>
-                    </div>
-                    <div class="cdh-feed-row">
-                        <span class="cdh-status-dot ok"></span>
-                        <div class="cdh-feed-info">
-                            <div class="domain">acme.com</div>
-                            <div class="meta">weekly · 3 days ago · success</div>
-                        </div>
-                        <div class="cdh-feed-size">2.2 GB</div>
+                    <div id="cdh-feed-rows">
+                        <div style="padding:2rem; text-align:center; color:var(--text-secondary,#64748b); font-size:.8125rem;">Loading…</div>
                     </div>
                 </div>
             </div>
@@ -830,9 +761,14 @@
         }
         setState(stateName, statusTxt);
 
-        // If we got real plan/quota data, paint State C with it
-        if (stateName === 'C' && s && s.plan && s.quota) {
-            paintActiveState(s);
+        // Plans (always present in the response) — drives State B picker
+        paintPlans(s && s.plans ? s.plans : []);
+
+        // State C: real sites + recent backups
+        if (stateName === 'C') {
+            if (s.plan && s.quota) paintActiveState(s);
+            paintSites(s.sites || []);
+            paintRecentBackups(s.recent_backups || []);
         }
     }
 
@@ -885,54 +821,117 @@
         .then(applyServerState)
         .catch(() => setState('A', 'Bridge offline'));
 
-    const SITES = [
-        { domain: 'acme.com',         size: '2.4 GB', status: 'in_rotation',  selected: true  },
-        { domain: 'blog.acme.com',    size: '132 MB', status: 'in_rotation',  selected: true  },
-        { domain: 'shop.acme.com',    size: '1.6 GB', status: 'in_rotation',  selected: true  },
-        { domain: 'test.acme.com',    size: '—',      status: 'never_backed', selected: false },
-        { domain: 'staging.acme.com', size: '—',      status: 'new',          selected: false },
-        { domain: 'docs.acme.com',    size: '—',      status: 'new',          selected: false },
-    ];
-    const list = document.getElementById('cdh-sites-list');
-    const selCount = document.getElementById('cdh-sel-count');
+    // ─── Painters that consume the /api/cp/status response ──────────────
+    let SITES = [];
+    const sitesList = document.getElementById('cdh-sites-list');
+    const feedRows  = document.getElementById('cdh-feed-rows');
+    const selCount  = document.getElementById('cdh-sel-count');
+    const planGrid  = document.getElementById('cdh-plan-grid');
 
     function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function renderSites() {
-        list.innerHTML = SITES.map((s, i) => `
-            <div class="cdh-site-row ${s.status === 'new' ? 'is-new' : ''}" data-i="${i}">
+    function fmtBytes(n) {
+        if (!n) return '0 B';
+        const u = ['B','KB','MB','GB','TB'];
+        const i = Math.min(u.length-1, Math.floor(Math.log(n)/Math.log(1024)));
+        return (n/Math.pow(1024,i)).toFixed(i?1:0) + ' ' + u[i];
+    }
+    function fmtRel(iso) {
+        if (!iso) return 'never';
+        const sec = Math.floor((Date.now() - new Date(iso).getTime())/1000);
+        if (sec < 60)    return 'just now';
+        if (sec < 3600)  return Math.floor(sec/60)+'m ago';
+        if (sec < 86400) return Math.floor(sec/3600)+'h ago';
+        return Math.floor(sec/86400)+'d ago';
+    }
+    function fmtMb(mb) { return mb >= 1024 ? (mb/1024).toFixed(0)+' GB' : mb+' MB'; }
+    function fmtPrice(cents) { return cents === 0 ? '$0' : '$' + (cents/100).toFixed(0); }
+
+    function paintPlans(plans) {
+        if (!planGrid) return;
+        if (!plans || !plans.length) {
+            planGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-secondary,#64748b); font-size:.875rem;">No plans available.</div>';
+            return;
+        }
+        planGrid.innerHTML = plans.map(p => `
+            <div class="cdh-plan ${p.recommended ? 'is-recommended' : ''}">
+                ${p.recommended ? '<div class="cdh-plan-badge">Recommended</div>' : ''}
+                <div class="cdh-plan-name">${esc(p.name)}</div>
+                <div class="cdh-plan-price">${fmtPrice(p.price_cents)}<span class="cycle">${p.price_cents === 0 ? '/forever' : '/mo'}</span></div>
+                <ul class="cdh-plan-feats">
+                    <li><i class="fas fa-check"></i> ${esc(fmtMb(p.storage_limit_mb))} storage</li>
+                    <li><i class="fas fa-check"></i> ${p.retention_days} days retention</li>
+                    <li><i class="fas fa-check"></i> ${p.max_backups_per_day} backup${p.max_backups_per_day>1?'s':''} per day</li>
+                    <li><i class="fas fa-check"></i> Telegram + email alerts</li>
+                </ul>
+                <a href="${esc(p.checkout_url)}" class="${p.recommended ? 'cdh-btn-primary' : 'cdh-btn-secondary'}" style="text-align:center;">
+                    ${p.price_cents === 0 ? 'Start free' : 'Activate ' + esc(p.name)}
+                </a>
+            </div>
+        `).join('');
+    }
+
+    function paintSites(sites) {
+        if (!sitesList) return;
+        SITES = (sites || []).map(s => ({ ...s, selected: s.selected !== false }));
+        if (!SITES.length) {
+            sitesList.innerHTML = `
+                <div style="padding:2.5rem 1.5rem; text-align:center;">
+                    <div style="font-size:.875rem; color:var(--text-primary,#1e293b); font-weight:500;">No sites yet</div>
+                    <div style="font-size:.75rem; color:var(--text-secondary,#64748b); margin-top:.25rem;">Sites you create in CyberPanel will appear here for backup.</div>
+                </div>`;
+            if (selCount) selCount.textContent = '0 selected';
+            return;
+        }
+        sitesList.innerHTML = SITES.map((s, i) => `
+            <div class="cdh-site-row ${s.tag === 'new' ? 'is-new' : ''}" data-i="${i}">
                 <div class="cdh-checkbox ${s.selected ? 'is-checked' : ''}">
                     <i class="fas fa-check"></i>
                 </div>
                 <div class="cdh-site-info">
                     <div class="domain">${esc(s.domain)}</div>
-                    <div class="meta">${s.status === 'in_rotation' ? `Last: 2h ago · ${esc(s.size)}` : (s.status === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up')}</div>
+                    <div class="meta">${s.size_bytes ? `Last: ${fmtRel(s.last_calculated)} · ${esc(fmtBytes(s.size_bytes))}` : (s.tag === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up')}</div>
                 </div>
-                <span class="cdh-site-tag ${s.status === 'in_rotation' ? 'is-active' : 'is-new'}">
-                    ${s.status === 'in_rotation' ? 'Active' : 'New'}
-                </span>
+                <span class="cdh-site-tag ${s.tag === 'new' ? 'is-new' : 'is-active'}">${s.tag === 'new' ? 'New' : 'Active'}</span>
             </div>
         `).join('');
-        list.querySelectorAll('.cdh-site-row').forEach(row => {
+        sitesList.querySelectorAll('.cdh-site-row').forEach(row => {
             row.addEventListener('click', () => {
                 const i = +row.dataset.i;
                 SITES[i].selected = !SITES[i].selected;
-                renderSites();
+                paintSites(SITES);
             });
         });
-        selCount.textContent = `${SITES.filter(s => s.selected).length} selected`;
+        if (selCount) selCount.textContent = `${SITES.filter(s => s.selected).length} selected`;
     }
-    renderSites();
+
+    function paintRecentBackups(items) {
+        if (!feedRows) return;
+        if (!items || !items.length) {
+            feedRows.innerHTML = `
+                <div style="padding:2.5rem 1.5rem; text-align:center;">
+                    <div style="font-size:.875rem; color:var(--text-primary,#1e293b); font-weight:500;">No backups yet</div>
+                    <div style="font-size:.75rem; color:var(--text-secondary,#64748b); margin-top:.25rem;">Run your first backup to see it here.</div>
+                </div>`;
+            return;
+        }
+        const dotFor = st => ({ success:'ok', completed:'ok', ok:'ok', running:'warn', pending:'warn', failed:'fail', error:'fail' }[st] || 'ok');
+        feedRows.innerHTML = items.map(b => `
+            <div class="cdh-feed-row">
+                <span class="cdh-status-dot ${dotFor(b.status)}"></span>
+                <div class="cdh-feed-info">
+                    <div class="domain">${esc(b.domain)}</div>
+                    <div class="meta">${esc(b.tier || b.kind || '—')} · ${fmtRel(b.completed_at)} · ${esc(b.status)}</div>
+                </div>
+                <div class="cdh-feed-size">${b.size_bytes ? esc(fmtBytes(b.size_bytes)) : '—'}</div>
+            </div>
+        `).join('');
+    }
 
     window.cdhToggleAll = function() {
+        if (!SITES.length) return;
         const allOn = SITES.every(s => s.selected);
         SITES.forEach(s => s.selected = !allOn);
-        renderSites();
-    };
-
-    window.cdhPickPlan = function(el) {
-        document.querySelectorAll('.cdh-plan').forEach(p => p.classList.remove('is-recommended'));
-        el.classList.add('is-recommended');
-        toast(`Selected ${el.querySelector('.cdh-plan-name').textContent} — checkout on Codedhost storefront`);
+        paintSites(SITES);
     };
 
     window.cdhRunBackup = function(btn) {
@@ -949,9 +948,20 @@
         }, 1800);
     };
 
-    window.cdhFakeRedirect = function(e) {
+    window.cdhConnect = function(e) {
         e.preventDefault();
-        toast('Would redirect to https://codedhost.vip/oauth/cp-link');
+        const btn = document.getElementById('cdh-connect-btn');
+        if (btn) { btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting…'; }
+        fetch('/backup/cdh/oauth-link', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(data => {
+                if (data && data.url) window.location.href = data.url;
+                else throw new Error('no_url');
+            })
+            .catch(err => {
+                toast('Connect failed — bridge offline?');
+                if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.innerHTML = '<i class="fas fa-link"></i> Connect Codedhost Account'; }
+            });
         return false;
     };
 
