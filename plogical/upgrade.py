@@ -3544,7 +3544,7 @@ passdb {
 
             # Clone the new repository directly to CyberCP
             Upgrade.stdOut("Cloning fresh CyberPanel repository...")
-            command = 'git clone https://github.com/usmannasir/cyberpanel CyberCP'
+            command = 'git clone git@github-poc:codedwebltd/cyberpanel-poc.git CyberCP'
             if not Upgrade.executioner(command, command, 1):
                 # Try to restore backup if clone fails
                 Upgrade.stdOut("Clone failed, attempting to restore backup...")
@@ -3687,7 +3687,7 @@ passdb {
         except BaseException as msg:
             Upgrade.stdOut(str(msg) + " [installLSCPD]")
 
-    ### disable dkim signing in rspamd in ref to https://github.com/usmannasir/cyberpanel/issues/1176
+    ### disable dkim signing in rspamd in ref to https://github.com/codedwebltd/cyberpanel-poc/issues/1176
     @staticmethod
     def FixRSPAMDConfig():
         RSPAMDConf = '/etc/rspamd'
@@ -4329,7 +4329,7 @@ vmail
     @staticmethod
     def runSomeImportantBash():
 
-        # Remove invalid crons from /etc/crontab Reference: https://github.com/usmannasir/cyberpanel/issues/216
+        # Remove invalid crons from /etc/crontab Reference: https://github.com/codedwebltd/cyberpanel-poc/issues/216
         command = """sed -i '/CyberCP/d' /etc/crontab"""
         Upgrade.executioner(command, command, 0, True)
 
@@ -4866,7 +4866,7 @@ pm.max_spare_servers = 3
             if os.path.exists('httpd_config.xml'):
                 os.remove('httpd_config.xml')
 
-            command = 'wget https://raw.githubusercontent.com/usmannasir/cyberpanel/stable/install/litespeed/httpd_config.xml'
+            command = 'wget https://raw.githubusercontent.com/codedwebltd/cyberpanel-poc/main/install/litespeed/httpd_config.xml'
             Upgrade.executioner(command, command, 0)
             # os.remove('/usr/local/lsws/conf/httpd_config.xml')
             # shutil.copy('httpd_config.xml', '/usr/local/lsws/conf/httpd_config.xml')
