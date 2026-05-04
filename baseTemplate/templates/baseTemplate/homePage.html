@@ -680,7 +680,44 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Codedhost Account Connect / Linked card (populated by /backup/cdh/account-info) -->
+    <div id="cdh-account-card" class="overview-section" style="display:none; background: linear-gradient(135deg, var(--bg-secondary, white) 0%, rgba(91, 95, 207, 0.04) 100%);">
+        <h2 class="section-title">CODEDHOST ACCOUNT</h2>
+        <div id="cdh-account-card-body" style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+            <!-- Filled in by JS -->
+        </div>
+    </div>
+
+    <style>
+        .cdh-account-icon {
+            width:56px; height:56px; flex-shrink:0;
+            border-radius:14px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:24px; color:white;
+        }
+        .cdh-account-icon.unlinked { background: linear-gradient(135deg,#5b5fcf 0%, #4a4eb8 100%); }
+        .cdh-account-icon.linked   { background: linear-gradient(135deg,#10b981 0%, #059669 100%); }
+        .cdh-account-text { flex:1; min-width:240px; }
+        .cdh-account-text h3 { margin:0 0 4px; font-size:16px; font-weight:700; color: var(--text-primary, #2f3640); }
+        .cdh-account-text p  { margin:0; font-size:13px; color: var(--text-secondary, #64748b); line-height:1.5; }
+        .cdh-account-bullets { display:flex; gap:1.25rem; flex-wrap:wrap; margin-top:8px; font-size:12px; color: var(--text-secondary, #64748b); }
+        .cdh-account-bullets span { display:inline-flex; align-items:center; gap:6px; }
+        .cdh-account-bullets i { color:#10b981; font-size:11px; }
+        .cdh-account-cta {
+            display:inline-flex; align-items:center; gap:8px;
+            padding:10px 18px; border-radius:8px;
+            font-size:13px; font-weight:600;
+            background: linear-gradient(135deg,#5b5fcf 0%, #4a4eb8 100%);
+            color:white; border:none; cursor:pointer; text-decoration:none;
+            transition: transform .15s, box-shadow .15s;
+            white-space:nowrap;
+        }
+        .cdh-account-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(91,95,207,0.35); color:white; }
+        .cdh-account-cta.linked { background: linear-gradient(135deg,#10b981 0%, #059669 100%); }
+        .cdh-account-cta.linked:hover { box-shadow: 0 6px 20px rgba(16,185,129,0.35); }
+    </style>
+
     <!-- Insights Section -->
     <div class="insights-section">
         <h2 class="section-title">INSIGHTS</h2>
@@ -1177,5 +1214,60 @@
             }, 100);
         }
     }
+
+    // ── Codedhost account-info card ──
+    // Listens for the cdh:account-info-loaded event fired from baseTemplate's
+    // global fetch (which runs on every page so the sidebar stays in sync).
+    // Falls back to a one-shot fetch if the event was missed.
+    (function () {
+        function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+        if (window.__cdhAccountInfo) {
+            renderAccountCard(window.__cdhAccountInfo);
+        } else {
+            window.addEventListener('cdh:account-info-loaded', e => renderAccountCard(e.detail));
+        }
+
+        function renderAccountCard(d) {
+            const card = document.getElementById('cdh-account-card');
+            const body = document.getElementById('cdh-account-card-body');
+            if (!card || !body) return;
+            card.style.display = 'block';
+
+            if (d.linked) {
+                body.innerHTML = `
+                    <div class="cdh-account-icon linked"><i class="fas fa-check-circle"></i></div>
+                    <div class="cdh-account-text">
+                        <h3>Account linked · ${esc(d.email || '')}</h3>
+                        <p>Your CyberPanel is synced with Codedhost. Manage backups, billing, and view credentials anywhere.</p>
+                        <div class="cdh-account-bullets">
+                            <span><i class="fas fa-shield-alt"></i> Encrypted off-site backups</span>
+                            <span><i class="fas fa-key"></i> Telegram-confirmed credential reveal</span>
+                            <span><i class="fas fa-globe"></i> Manage from anywhere</span>
+                        </div>
+                    </div>
+                    <a href="${esc(d.dashboard_url || 'https://codedhost.vip/dashboard')}" target="_blank" rel="noopener" class="cdh-account-cta linked">
+                        Open dashboard <i class="fas fa-arrow-right"></i>
+                    </a>
+                `;
+            } else {
+                body.innerHTML = `
+                    <div class="cdh-account-icon unlinked"><i class="fas fa-link"></i></div>
+                    <div class="cdh-account-text">
+                        <h3>Connect your Codedhost account</h3>
+                        <p>Link this control panel to your Codedhost account so your backups, credentials, and hosting details follow you — even after this server is gone.</p>
+                        <div class="cdh-account-bullets">
+                            <span><i class="fas fa-shield-alt"></i> Off-site encrypted backups in one click</span>
+                            <span><i class="fas fa-key"></i> Reveal FTP / DB passwords with Telegram 2FA</span>
+                            <span><i class="fas fa-history"></i> Service history persists if hosting expires</span>
+                        </div>
+                    </div>
+                    <a href="/backup/gDrive" class="cdh-account-cta">
+                        Connect now <i class="fas fa-arrow-right"></i>
+                    </a>
+                `;
+            }
+        }
+    })();
 </script>
 {% endblock %}

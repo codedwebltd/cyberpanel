@@ -4,9 +4,13 @@ from . import codedhost_bridge  # Codedhost CP↔Laravel bridge (override-instal
 
 urlpatterns = [
     # Codedhost backup (browser → Django proxy → Laravel /api/cp/*)
-    re_path(r'^cdh/status$',      codedhost_bridge.cdh_status,      name='cdhStatus'),
-    re_path(r'^cdh/oauth-link$',  codedhost_bridge.cdh_oauth_link,  name='cdhOauthLink'),
-    re_path(r'^cdh/backup-now$',  codedhost_bridge.cdh_backup_now,  name='cdhBackupNow'),
+    re_path(r'^cdh/status$',          codedhost_bridge.cdh_status,        name='cdhStatus'),
+    re_path(r'^cdh/oauth-link$',      codedhost_bridge.cdh_oauth_link,    name='cdhOauthLink'),
+    re_path(r'^cdh/backup-now$',      codedhost_bridge.cdh_backup_now,    name='cdhBackupNow'),
+    re_path(r'^cdh/sites/rotation$',  codedhost_bridge.cdh_site_rotation, name='cdhSiteRotation'),
+    re_path(r'^cdh/account-info$',    codedhost_bridge.cdh_account_info,  name='cdhAccountInfo'),
+    re_path(r'^cdh/announcements$',                       codedhost_bridge.cdh_announcements,         name='cdhAnnouncements'),
+    re_path(r'^cdh/announcements/(?P<ann_id>\d+)/dismiss$', codedhost_bridge.cdh_announcement_dismiss, name='cdhAnnouncementDismiss'),
 
     re_path(r'^$', views.loadBackupHome, name='loadBackupHome'),
     re_path(r'^getCurrentBackups$', views.getCurrentBackups, name='getCurrentBackups'),

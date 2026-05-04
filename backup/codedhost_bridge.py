@@ -191,6 +191,84 @@ def cdh_backup_now(request):
 
 
 @cp_login_required
+def cdh_announcements(request):
+    """GET /backup/cdh/announcements — proxies to Laravel /api/cp/announcements."""
+    admin = (request.cp_admin.userName or '').strip()
+    code, data = _post('/api/cp/announcements', admin, body={})
+    return JsonResponse(data, status=code, safe=False)
+
+
+@cp_login_required
+def cdh_announcement_dismiss(request, ann_id):
+    """POST /backup/cdh/announcements/<id>/dismiss — proxies to Laravel."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method_not_allowed'}, status=405)
+    admin = (request.cp_admin.userName or '').strip()
+    code, data = _post(f'/api/cp/announcements/{int(ann_id)}/dismiss', admin, body={})
+    return JsonResponse(data, status=code, safe=False)
+
+
+@cp_login_required
+def cdh_account_info(request):
+    """
+    GET /backup/cdh/account-info — returns whether the current CP admin is
+    linked to a Laravel account, plus their primary domain (for sidebar UI).
+
+    Cached in CP session for 5 min to avoid hammering Laravel on every page load.
+    """
+    import time
+    sess_key = '_cdh_acct_info'
+    cached = request.session.get(sess_key)
+    if cached and (time.time() - cached.get('cached_at', 0) < 300):
+        return JsonResponse(cached['data'])
+
+    admin = (request.cp_admin.userName or '').strip()
+
+    # Resolve primary domain (first website owned by this admin).
+    primary = ''
+    try:
+        from websiteFunctions.models import Websites
+        import socket
+        host = socket.gethostname()
+        rows = list(
+            Websites.objects.filter(admin=request.cp_admin)
+                .exclude(domain=host)
+                .exclude(domain__startswith='vmi')
+                .values_list('domain', flat=True)[:1]
+        )
+        if rows:
+            primary = rows[0]
+    except Exception:
+        pass
+
+    code, data = _post('/api/cp/account-info', admin, body={})
+    if isinstance(data, dict):
+        data['admin'] = admin
+        data['primary_domain'] = primary
+
+    request.session[sess_key] = {'data': data, 'cached_at': time.time()}
+    return JsonResponse(data, status=code, safe=False)
+
+
+@cp_login_required
+def cdh_site_rotation(request):
+    """POST /backup/cdh/sites/rotation {site_id, in_rotation} — proxies to Laravel."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method_not_allowed'}, status=405)
+    admin = (request.cp_admin.userName or '').strip()
+    try:
+        body = json.loads(request.body or b'{}')
+    except Exception:
+        body = {}
+    site_id = body.get('site_id')
+    in_rot  = body.get('in_rotation')
+    if not isinstance(site_id, int) or not isinstance(in_rot, bool):
+        return JsonResponse({'error': 'site_id_and_in_rotation_required'}, status=400)
+    code, data = _post('/api/cp/sites/rotation', admin, body={'site_id': site_id, 'in_rotation': in_rot})
+    return JsonResponse(data, status=code, safe=False)
+
+
+@cp_login_required
 def cdh_oauth_link(request):
     """
     GET /backup/cdh/oauth-link

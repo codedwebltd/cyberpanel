@@ -958,11 +958,38 @@
         sitesList.querySelectorAll('.cdh-site-row').forEach(row => {
             row.addEventListener('click', () => {
                 const i = +row.dataset.i;
-                SITES[i].selected = !SITES[i].selected;
+                const next = !SITES[i].selected;
+                // Optimistic local flip — UI feels instant.
+                SITES[i].selected    = next;
+                SITES[i].in_rotation = next;
                 paintSites(SITES);
+                // Persist to Laravel via bridge. On failure: revert + toast.
+                cdhSetRotation(SITES[i].id, next).catch(err => {
+                    SITES[i].selected    = !next;
+                    SITES[i].in_rotation = !next;
+                    paintSites(SITES);
+                    toast(`Failed to update rotation: ${err.message || err}`);
+                });
             });
         });
         if (selCount) selCount.textContent = `${SITES.filter(s => s.selected).length} selected`;
+    }
+
+    function cdhSetRotation(siteId, inRotation) {
+        const csrf = getCsrfToken();
+        if (!csrf) return Promise.reject(new Error('csrf_missing'));
+        return fetch('/backup/cdh/sites/rotation', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ site_id: siteId, in_rotation: inRotation }),
+        }).then(async r => {
+            if (!r.ok) {
+                const body = await r.text().catch(() => '');
+                throw new Error(`${r.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+            }
+            return r.json();
+        });
     }
 
     function paintRecentBackups(items) {

@@ -1318,11 +1318,11 @@
             <span>Design</span>
         </a>
         {% endif %}
-        <a href="https://codedhost.vip" class="menu-item" target="_blank" rel="noopener">
+        <a href="#" data-cdh-sidebar-site class="menu-item" target="_blank" rel="noopener">
             <div class="icon-wrapper">
                 <i class="fas fa-globe"></i>
             </div>
-            <span>codedhost.vip</span>
+            <span data-cdh-sidebar-site-text>your site</span>
         </a>
         <a href="https://codedhost.vip/knowledgebase" class="menu-item" target="_blank" rel="noopener">
             <div class="icon-wrapper">
@@ -2030,7 +2030,7 @@
             </div>
             <div class="notification-text">
                 <span>{% trans "Looks like your websites are not secured with automatic backups." %}</span>
-                <a href="{% url 'OneClickBackups' %}" class="configure-link">{% trans "Configure now" %}</a>
+                <a href="/backup/gDrive" class="configure-link">{% trans "Configure now" %}</a>
             </div>
             <button class="notification-close" onclick="dismissBackupNotification()">
                 <i class="fas fa-times"></i>
@@ -2164,24 +2164,23 @@
             }
         });
         
-        // Backup notification banner logic
+        // Backup notification banner logic.
+        // Hidden when user is linked to Codedhost (window.__cdhAccountInfo from
+        // the global account-info fetch in this file). If the fetch hasn't
+        // resolved yet we show optimistically + hide once it lands.
         function checkBackupStatus() {
-            // Check if user has dismissed the notification in this session
-            if (sessionStorage.getItem('backupNotificationDismissed') === 'true') {
-                return;
-            }
-            
-            // Check if user has backup configured (you'll need to implement this API)
-            // For now, we'll show it by default unless they have a backup plan
-            // This should be replaced with an actual check
-            {% if not request.session.has_backup_configured %}
-                showBackupNotification();
-            {% endif %}
-            
-            // For demonstration, let's show it if URL doesn't contain 'OneClickBackups'
-            if (!window.location.href.includes('OneClickBackups')) {
-                showBackupNotification();
-            }
+            if (sessionStorage.getItem('backupNotificationDismissed') === 'true') return;
+            if (window.location.href.includes('/backup/')) return;
+            // If account-info already loaded and linked → never show
+            if (window.__cdhAccountInfo && window.__cdhAccountInfo.linked) return;
+            showBackupNotification();
+            // When account-info eventually lands, hide if linked
+            window.addEventListener('cdh:account-info-loaded', e => {
+                if (e.detail && e.detail.linked) {
+                    document.getElementById('backup-notification')?.classList.remove('show');
+                    document.body.classList.remove('notification-shown');
+                }
+            });
         }
         
         function showBackupNotification() {
@@ -2351,6 +2350,112 @@
     </script>
     
     {% block footer_scripts %}{% endblock %}
+
+    <script>
+        // Global Codedhost account-info fetch — runs on every CP page so the
+        // sidebar "your site" entry stays in sync. Bridge caches in CP session
+        // for 5 min, so this is one cheap call per session, not per page.
+        // Result is also stored in window.__cdhAccountInfo so per-page widgets
+        // (e.g. /base/ Connect card) can consume without re-fetching.
+        (function () {
+            fetch('/backup/cdh/account-info', { credentials: 'same-origin' })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {
+                    if (!d) return;
+                    window.__cdhAccountInfo = d;
+                    // Sidebar entry
+                    const el = document.querySelector('[data-cdh-sidebar-site]');
+                    if (el) {
+                        const dom = d.primary_domain || d.admin || '';
+                        const txt = el.querySelector('[data-cdh-sidebar-site-text]');
+                        if (dom) {
+                            if (txt) txt.textContent = dom;
+                            el.setAttribute('href', 'https://' + dom);
+                        } else {
+                            el.style.display = 'none';
+                        }
+                    }
+                    // Notify per-page consumers
+                    window.dispatchEvent(new CustomEvent('cdh:account-info-loaded', { detail: d }));
+                })
+                .catch(() => { /* silent */ });
+        })();
+
+        // ── Codedhost announcements (banners pushed from Laravel admin) ──
+        // Renders a stack of dismissible banners at the top of #main-content.
+        // Severity drives the color. Dismiss POSTs back so the same banner
+        // never reappears for this user.
+        (function () {
+            const SEVERITY_COLORS = {
+                info:     { bg: 'linear-gradient(135deg,#1e3a8a,#1e40af)', icon: 'fa-info-circle' },
+                success:  { bg: 'linear-gradient(135deg,#065f46,#059669)', icon: 'fa-check-circle' },
+                warning:  { bg: 'linear-gradient(135deg,#78350f,#b45309)', icon: 'fa-exclamation-triangle' },
+                critical: { bg: 'linear-gradient(135deg,#7f1d1d,#b91c1c)', icon: 'fa-exclamation-circle' },
+            };
+            function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+            fetch('/backup/cdh/announcements', { credentials: 'same-origin' })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {
+                    if (!d || !Array.isArray(d.announcements) || !d.announcements.length) return;
+                    // Position fixed-top like CP's own banners, stacked BELOW them so we never overlap.
+                    const stack = document.createElement('div');
+                    stack.style.cssText = `position:fixed; left:260px; right:0; z-index:996; padding:8px 30px; display:flex; flex-direction:column; gap:8px;`;
+                    if (window.innerWidth < 769) stack.style.left = '0';
+
+                    // Re-measure CP banners on every animation/mutation for ~3s to catch
+                    // CP's own delayed show() calls (AI scanner banner appears late).
+                    const reposition = () => {
+                        const cpBanners = document.querySelectorAll('.notification-banner.show, .ai-scanner-banner.show');
+                        let topPx = 80;
+                        cpBanners.forEach(b => { topPx += b.offsetHeight + 4; });
+                        stack.style.top = topPx + 'px';
+                        const main = document.getElementById('main-content');
+                        if (main) main.style.paddingTop = (stack.offsetHeight + topPx - 60) + 'px';
+                    };
+                    reposition();
+                    [200, 500, 1000, 2000].forEach(ms => setTimeout(reposition, ms));
+                    window.addEventListener('resize', reposition);
+
+                    d.announcements.forEach(a => {
+                        const pal = SEVERITY_COLORS[a.severity] || SEVERITY_COLORS.info;
+                        const card = document.createElement('div');
+                        card.style.cssText = `background:${pal.bg}; color:white; padding:14px 16px; border-radius:10px; display:flex; align-items:flex-start; gap:12px; box-shadow:0 4px 14px rgba(0,0,0,0.15);`;
+                        const ctaHtml = (a.cta_label && a.cta_url)
+                            ? `<a href="${esc(a.cta_url)}" target="_blank" rel="noopener" style="background:rgba(255,255,255,0.18); color:white; text-decoration:none; padding:6px 14px; border-radius:6px; font-weight:600; font-size:12px; flex-shrink:0; transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">${esc(a.cta_label)} →</a>`
+                            : '';
+                        card.innerHTML = `
+                            <div style="font-size:18px; flex-shrink:0;"><i class="fas ${pal.icon}"></i></div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; font-size:14px; margin-bottom:2px;">${esc(a.title)}</div>
+                                <div style="font-size:13px; opacity:0.95; line-height:1.45;">${esc(a.body)}</div>
+                            </div>
+                            ${ctaHtml}
+                            <button type="button" data-id="${a.id}" style="background:transparent; border:0; color:white; opacity:0.7; cursor:pointer; padding:4px 6px; font-size:14px;" title="Dismiss">
+                                <i class="fas fa-times"></i>
+                            </button>`;
+                        const btn = card.querySelector('button');
+                        btn.addEventListener('click', () => {
+                            card.style.transition = 'opacity .2s, max-height .2s';
+                            card.style.opacity = '0';
+                            card.style.maxHeight = '0';
+                            const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
+                            fetch(`/backup/cdh/announcements/${a.id}/dismiss`, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf ? decodeURIComponent(csrf) : '' },
+                            }).finally(() => setTimeout(() => card.remove(), 220));
+                        });
+                        stack.appendChild(card);
+                    });
+                    document.body.appendChild(stack);
+                    // Push #main-content down so banners don't sit over content.
+                    const main = document.getElementById('main-content');
+                    if (main) main.style.paddingTop = (stack.offsetHeight + topPx - 60) + 'px';
+                })
+                .catch(() => { /* silent */ });
+        })();
+    </script>
 </body>
 </html>
 {% endwith %}
