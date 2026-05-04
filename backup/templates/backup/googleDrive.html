@@ -582,6 +582,22 @@
          STATE B — CONNECTED, NO PLAN
          ═══════════════════════════════════════════════════════════════ -->
     <section class="cdh-state" data-state="B">
+        <!-- Pending payment banner (rendered when /api/cp/status returns pending_payment) -->
+        <div id="cdh-pending-banner" style="display:none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display:none;">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <i class="fas fa-clock" style="color:#92400e; font-size:1.5rem; margin-top:0.15rem;"></i>
+                <div style="flex:1;">
+                    <h3 style="margin:0 0 0.4rem; color:#78350f; font-size:1rem; font-weight:700;">
+                        Payment under review
+                    </h3>
+                    <p style="margin:0 0 0.6rem; color:#92400e; font-size:0.8125rem; line-height:1.5;">
+                        Your <span data-cdh="pending-plan">—</span> payment (<span data-cdh="pending-amount">—</span>, <span data-cdh="pending-method">—</span>) was submitted <span data-cdh="pending-when">—</span>. We'll activate your plan as soon as an admin confirms the transfer — usually within a few hours. You'll get an email and Telegram notification.
+                    </p>
+                    <a id="cdh-pending-checkout" href="#" target="_blank" rel="noopener" style="display:inline-block; font-size:0.75rem; font-weight:600; color:#78350f; text-decoration:underline;">View order details →</a>
+                </div>
+            </div>
+        </div>
+
         <div class="cdh-plan-grid" id="cdh-plan-grid">
             <!-- Populated from /api/cp/status response.plans -->
             <div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-secondary,#64748b); font-size:.875rem;">Loading plans…</div>
@@ -605,9 +621,14 @@
                 <div class="meta" data-cdh="plan-meta">—</div>
             </div>
             <div class="cdh-stat">
-                <div class="label">Storage</div>
+                <div class="label">R2 Storage</div>
                 <div class="value"><span data-cdh="storage-value">—</span><span class="light" data-cdh="storage-limit"></span></div>
                 <div class="meta" data-cdh="storage-meta">—</div>
+            </div>
+            <div class="cdh-stat">
+                <div class="label">Site size</div>
+                <div class="value"><span data-cdh="source-value">—</span></div>
+                <div class="meta" data-cdh="source-meta">on disk</div>
             </div>
             <div class="cdh-stat">
                 <div class="label">Sites</div>
@@ -634,7 +655,7 @@
                 </div>
                 <div class="cdh-quota-bar"><div class="cdh-quota-fill" style="width: 0%" data-cdh="quota-fill"></div></div>
                 <div class="cdh-quota-foot">
-                    <span class="breakdown">Resets daily · oldest backups auto-rotate when full</span>
+                    <span class="breakdown" data-cdh="quota-breakdown">Cumulative across all retained snapshots · oldest auto-prune at retention limit</span>
                 </div>
             </div>
         </div>
@@ -661,7 +682,7 @@
                     <button class="cdh-btn-primary" type="button" onclick="cdhRunBackup(this)">
                         <i class="fas fa-cloud-upload-alt"></i> Backup selected now
                     </button>
-                    <button class="cdh-btn-secondary" type="button">
+                    <button class="cdh-btn-secondary" type="button" onclick="cdhShowSchedule()">
                         <i class="fas fa-clock"></i> Schedule
                     </button>
                 </div>
@@ -725,7 +746,8 @@
         setState(stateName, statusTxt);
 
         // Plans (always present in the response) — drives State B picker
-        paintPlans(s && s.plans ? s.plans : []);
+        paintPlans(s && s.plans ? s.plans : [], s && s.pending_payment);
+        paintPendingBanner(s && s.pending_payment);
 
         // State C: real sites + recent backups
         if (stateName === 'C') {
@@ -750,6 +772,19 @@
             el.textContent = '/ ' + humanBytes(s.quota.limit_bytes || 0));
         document.querySelectorAll('[data-cdh="storage-meta"]').forEach(el =>
             el.textContent = pct + '% used');
+        // Secondary: source size on disk (informational — what's getting backed up)
+        document.querySelectorAll('[data-cdh="source-value"]').forEach(el =>
+            el.textContent = humanBytes(s.quota.source_bytes_total || 0));
+        document.querySelectorAll('[data-cdh="source-meta"]').forEach(el => {
+            const src = s.quota.source_bytes_total || 0;
+            const r2  = s.quota.used_bytes || 0;
+            if (src > 0 && r2 > 0) {
+                const ratio = (r2 / src * 100).toFixed(0);
+                el.textContent = `compresses to ~${ratio}%`;
+            } else {
+                el.textContent = 'across all sites';
+            }
+        });
         document.querySelectorAll('[data-cdh="sites-total"]').forEach(el => el.textContent = s.quota.sites_total ?? 0);
         document.querySelectorAll('[data-cdh="sites-rotation"]').forEach(el =>
             el.textContent = (s.quota.sites_in_rotation ?? 0) + ' in rotation');
@@ -778,11 +813,44 @@
         return Math.floor(s/86400) + 'd ago';
     }
 
-    // Kick off the fetch on load. If it fails, fall back to State A.
-    fetch('/backup/cdh/status', { credentials: 'same-origin' })
-        .then(r => r.ok ? r.json() : Promise.reject(r.status))
-        .then(applyServerState)
-        .catch(() => setState('A', 'Bridge offline'));
+    // ─── Status fetch + smart polling ───────────────────────────────────
+    // Polls /backup/cdh/status every 10s while there are active jobs (pending
+    // or running). Auto-stops when none. Caps at 15 min runaway protection.
+    // Pauses while tab is hidden. window.cdhPoll.stop = true halts permanently
+    // until next page load.
+    window.cdhPoll = { stop: false, timer: null, until: 0 };
+    const POLL_INTERVAL_MS = 10000;
+    const POLL_MAX_MS      = 15 * 60 * 1000;
+
+    function cdhFetchStatus() {
+        return fetch('/backup/cdh/status', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(s => {
+                applyServerState(s);
+                schedulePoll(s && s.has_active_jobs);
+            })
+            .catch(() => setState('A', 'Bridge offline'));
+    }
+
+    function schedulePoll(active) {
+        clearTimeout(window.cdhPoll.timer);
+        if (window.cdhPoll.stop)      return; // permanent halt
+        if (!active)                  return; // nothing in flight
+        if (Date.now() > window.cdhPoll.until) {
+            window.cdhPoll.stop = true;
+            toast('Polling stopped after 15 min — refresh to resume.');
+            return;
+        }
+        if (document.hidden) return;          // resumes on visibilitychange below
+        window.cdhPoll.timer = setTimeout(cdhFetchStatus, POLL_INTERVAL_MS);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !window.cdhPoll.stop) cdhFetchStatus();
+    });
+
+    // Initial load
+    cdhFetchStatus();
 
     // ─── Painters that consume the /api/cp/status response ──────────────
     let SITES = [];
@@ -809,28 +877,52 @@
     function fmtMb(mb) { return mb >= 1024 ? (mb/1024).toFixed(0)+' GB' : mb+' MB'; }
     function fmtPrice(cents) { return cents === 0 ? '$0' : '$' + (cents/100).toFixed(0); }
 
-    function paintPlans(plans) {
+    function paintPendingBanner(p) {
+        const el = document.getElementById('cdh-pending-banner');
+        if (!el) return;
+        if (!p) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        const set = (key, val) => document.querySelectorAll(`[data-cdh="${key}"]`).forEach(n => n.textContent = val);
+        set('pending-plan', p.item_name || '—');
+        set('pending-amount', p.currency === 'USD' ? `$${(p.total_cents/100).toFixed(2)}` : `${(p.total_cents/100).toFixed(2)} ${p.currency}`);
+        set('pending-method', (p.payment_method || 'manual transfer').replace(/_/g, ' '));
+        set('pending-when', p.submitted_at ? fmtRel(p.submitted_at) : 'just now');
+        const link = document.getElementById('cdh-pending-checkout');
+        if (link && p.checkout_url) link.href = p.checkout_url;
+    }
+
+    function paintPlans(plans, pending) {
         if (!planGrid) return;
         if (!plans || !plans.length) {
             planGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--text-secondary,#64748b); font-size:.875rem;">No plans available.</div>';
             return;
         }
-        planGrid.innerHTML = plans.map(p => `
-            <div class="cdh-plan ${p.recommended ? 'is-recommended' : ''}">
+        const blocked = !!pending;
+        const pendingSku = pending && pending.item_sku;
+        planGrid.innerHTML = plans.map(p => {
+            const isPendingPlan = blocked && p.slug === pendingSku;
+            const perDay = p.backup_interval_hours ? Math.max(1, Math.round(24 / p.backup_interval_hours)) : 1;
+            const cardStyle = blocked ? 'opacity:0.55; pointer-events:none; filter:grayscale(0.4);' : '';
+            const btnHtml = isPendingPlan
+                ? `<span class="cdh-btn-secondary" style="text-align:center; cursor:not-allowed;"><i class="fas fa-clock"></i> Awaiting approval</span>`
+                : (blocked
+                    ? `<span class="cdh-btn-secondary" style="text-align:center; cursor:not-allowed; opacity:0.6;">Locked while pending</span>`
+                    : `<a href="${esc(p.checkout_url)}" class="${p.recommended ? 'cdh-btn-primary' : 'cdh-btn-secondary'}" style="text-align:center;">${p.price_cents === 0 ? 'Start free' : 'Activate ' + esc(p.name)}</a>`);
+            return `
+            <div class="cdh-plan ${p.recommended ? 'is-recommended' : ''}" style="${cardStyle}">
                 ${p.recommended ? '<div class="cdh-plan-badge">Recommended</div>' : ''}
                 <div class="cdh-plan-name">${esc(p.name)}</div>
                 <div class="cdh-plan-price">${fmtPrice(p.price_cents)}<span class="cycle">${p.price_cents === 0 ? '/forever' : '/mo'}</span></div>
                 <ul class="cdh-plan-feats">
                     <li><i class="fas fa-check"></i> ${esc(fmtMb(p.storage_limit_mb))} storage</li>
                     <li><i class="fas fa-check"></i> ${p.retention_days} days retention</li>
-                    <li><i class="fas fa-check"></i> ${p.max_backups_per_day} backup${p.max_backups_per_day>1?'s':''} per day</li>
+                    <li><i class="fas fa-check"></i> ${perDay} backup${perDay>1?'s':''} per day</li>
                     <li><i class="fas fa-check"></i> Telegram + email alerts</li>
                 </ul>
-                <a href="${esc(p.checkout_url)}" class="${p.recommended ? 'cdh-btn-primary' : 'cdh-btn-secondary'}" style="text-align:center;">
-                    ${p.price_cents === 0 ? 'Start free' : 'Activate ' + esc(p.name)}
-                </a>
+                ${btnHtml}
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function paintSites(sites) {
@@ -852,7 +944,13 @@
                 </div>
                 <div class="cdh-site-info">
                     <div class="domain">${esc(s.domain)}</div>
-                    <div class="meta">${s.size_bytes ? `Last: ${fmtRel(s.last_calculated)} · ${esc(fmtBytes(s.size_bytes))}` : (s.tag === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up')}</div>
+                    <div class="meta">${
+                        s.backup_bytes
+                            ? `R2: ${esc(fmtBytes(s.backup_bytes))} · Site: ${esc(fmtBytes(s.source_bytes||0))}`
+                            : (s.source_bytes
+                                ? `Site: ${esc(fmtBytes(s.source_bytes))} · Not yet backed up`
+                                : (s.tag === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up'))
+                    }</div>
                 </div>
                 <span class="cdh-site-tag ${s.tag === 'new' ? 'is-new' : 'is-active'}">${s.tag === 'new' ? 'New' : 'Active'}</span>
             </div>
@@ -897,18 +995,78 @@
         paintSites(SITES);
     };
 
+    function getCsrfToken() {
+        const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
+    }
+
     window.cdhRunBackup = function(btn) {
-        const n = SITES.filter(s => s.selected).length;
-        if (!n) { toast('Select at least one site first.'); return; }
+        const selected = SITES.filter(s => s.selected);
+        if (!selected.length) { toast('Select at least one site first.'); return; }
+
+        const csrf = getCsrfToken();
+        if (!csrf) { toast('Security token missing — refresh the page.'); return; }
+
+        const ids = selected.map(s => s.id);
         const original = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="cdh-spin"></span> Queueing…';
-        toast(`Backup queued for ${n} site${n>1?'s':''}…`);
-        setTimeout(() => {
+
+        fetch('/backup/cdh/backup-now', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ site_ids: ids }),
+        })
+        .then(async r => {
+            if (!r.ok) {
+                const body = await r.text().catch(() => '');
+                throw new Error(`${r.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+            }
+            return r.json();
+        })
+        .then(data => {
+            const skipped = (data.skipped || []).length;
+            const n = ids.length - skipped;
+            toast(n
+                ? `Backup queued for ${n} site${n>1?'s':''} — watching for completion…`
+                : 'Already in progress — nothing new to queue.');
+            // Reset poll watchdog and kick off active polling. Defensive:
+            // window.cdhPoll is initialized at module load, but guard anyway.
+            window.cdhPoll = window.cdhPoll || { stop: false, timer: null, until: 0 };
+            window.cdhPoll.stop  = false;
+            window.cdhPoll.until = Date.now() + POLL_MAX_MS;
+            cdhFetchStatus();
+        })
+        .catch(err => toast(`Failed to queue backup: ${err.message || err}`))
+        .finally(() => {
             btn.disabled = false;
             btn.innerHTML = original;
-            toast(`Backup started — you'll be notified when complete.`);
-        }, 1800);
+        });
+    };
+
+    window.cdhStopPolling = function() {
+        window.cdhPoll.stop = true;
+        clearTimeout(window.cdhPoll.timer);
+        toast('Live updates paused.');
+    };
+
+    window.cdhShowSchedule = function() {
+        const plan = SERVER_STATE && SERVER_STATE.plan;
+        if (!plan) { toast('No active plan.'); return; }
+        const intervalH = plan.backup_interval_hours || 24;
+        const perDay    = Math.max(1, Math.round(24 / intervalH));
+        const next      = SERVER_STATE && SERVER_STATE.last_backup_at
+            ? new Date(new Date(SERVER_STATE.last_backup_at).getTime() + intervalH * 3600 * 1000)
+            : new Date(Date.now() + intervalH * 3600 * 1000);
+        const msg =
+            `Plan: ${plan.name}\n` +
+            `Interval: every ${intervalH} hour${intervalH>1?'s':''} (${perDay}/day)\n` +
+            `Retention: ${plan.retention_days} days\n` +
+            `Next scheduled run: ${next.toLocaleString()}\n\n` +
+            `To run a backup right now, click "Backup selected now". ` +
+            `Per-site custom schedules are coming soon.`;
+        alert(msg);
     };
 
     window.cdhConnect = function(e) {

@@ -174,6 +174,23 @@ def cdh_status(request):
 
 
 @cp_login_required
+def cdh_backup_now(request):
+    """POST /backup/cdh/backup-now {site_ids:[...]} — proxies to Laravel /api/cp/backup/now."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method_not_allowed'}, status=405)
+    admin = (request.cp_admin.userName or '').strip()
+    try:
+        body = json.loads(request.body or b'{}')
+    except Exception:
+        body = {}
+    site_ids = body.get('site_ids') or []
+    if not isinstance(site_ids, list) or not site_ids:
+        return JsonResponse({'error': 'site_ids_required'}, status=400)
+    code, data = _post('/api/cp/backup/now', admin, body={'site_ids': site_ids})
+    return JsonResponse(data, status=code, safe=False)
+
+
+@cp_login_required
 def cdh_oauth_link(request):
     """
     GET /backup/cdh/oauth-link
