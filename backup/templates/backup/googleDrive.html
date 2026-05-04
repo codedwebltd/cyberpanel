@@ -53,34 +53,6 @@
         background: linear-gradient(135deg, #d49aa1, #7a1220);
     }
 
-    /* Preview pills (preview-only — remove on lock-in) */
-    .cdh-preview-pills {
-        display: inline-flex;
-        gap: 0.25rem;
-        background: var(--bg-secondary, white);
-        padding: 0.25rem;
-        border-radius: 10px;
-        border: 1px solid var(--border-color, #e8e9ff);
-        margin-top: 1.25rem;
-    }
-    .cdh-preview-pill {
-        background: transparent;
-        border: 0;
-        padding: 0.45rem 0.85rem;
-        border-radius: 7px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-secondary, #64748b);
-        cursor: pointer;
-        font-family: inherit;
-        transition: all .15s;
-    }
-    .cdh-preview-pill:hover { color: var(--text-primary, #1e293b); }
-    .cdh-preview-pill.is-active {
-        background: var(--accent-color, #5b5fcf);
-        color: white;
-    }
-
     /* Status pill */
     .cdh-status-pill {
         display: inline-flex; align-items: center; gap: 0.5rem;
@@ -569,17 +541,11 @@
         </p>
         <div class="cdh-brand-mark">Powered by Codedhost · R2-encrypted</div>
 
-        <!-- Preview state switcher (REMOVE on lock-in) -->
         <div style="margin-top: 1.25rem;">
-            <span id="cdh-status-pill" class="cdh-status-pill is-on" style="margin-right: 0.5rem;">
+            <span id="cdh-status-pill" class="cdh-status-pill is-off">
                 <span class="dot"></span>
-                <span id="cdh-status-pill-txt">Connected · Basic plan</span>
+                <span id="cdh-status-pill-txt">Loading…</span>
             </span>
-        </div>
-        <div class="cdh-preview-pills" role="tablist">
-            <button class="cdh-preview-pill" data-state="A">A · Not connected</button>
-            <button class="cdh-preview-pill" data-state="B">B · No plan yet</button>
-            <button class="cdh-preview-pill" data-state="C">C · Active plan</button>
         </div>
     </div>
 
@@ -726,7 +692,6 @@
 <script>
 (function(){
     const sections   = document.querySelectorAll('.cdh-state');
-    const pills      = document.querySelectorAll('.cdh-preview-pill');
     const headerSub  = document.getElementById('cdh-header-sub');
     const statusPill = document.getElementById('cdh-status-pill');
     const statusTxt  = document.getElementById('cdh-status-pill-txt');
@@ -740,14 +705,12 @@
     };
     function setState(name, statusOverride) {
         sections.forEach(s => s.classList.toggle('is-active', s.dataset.state === name));
-        pills.forEach(p => p.classList.toggle('is-active', p.dataset.state === name));
         const m = META[name] || META.A;
         headerSub.textContent = m.sub;
         statusPill.classList.toggle('is-on',  m.cls === 'is-on');
         statusPill.classList.toggle('is-off', m.cls === 'is-off');
         statusTxt.textContent = statusOverride || m.txt;
     }
-    pills.forEach(p => p.addEventListener('click', () => setState(p.dataset.state)));
 
     // ─── Fetch real state from Laravel (proxied through Django) ──────────
     function applyServerState(s) {
@@ -952,14 +915,31 @@
         e.preventDefault();
         const btn = document.getElementById('cdh-connect-btn');
         if (btn) { btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting…'; }
-        fetch('/backup/cdh/oauth-link', { credentials: 'same-origin' })
-            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        fetch('/backup/cdh/oauth-link', { credentials: 'same-origin', redirect: 'manual' })
+            .then(async r => {
+                const ct = r.headers.get('content-type') || '';
+                if (r.type === 'opaqueredirect' || r.status === 0 || r.status === 302) {
+                    throw new Error('Codedhost session expired — log out and log back in.');
+                }
+                if (r.status === 401 || r.status === 403) {
+                    throw new Error('Not authenticated to Codedhost — log in again.');
+                }
+                if (!r.ok) {
+                    const t = await r.text().catch(() => '');
+                    throw new Error(`Bridge HTTP ${r.status}` + (t ? ': ' + t.slice(0, 100) : ''));
+                }
+                if (!ct.includes('application/json')) {
+                    throw new Error('Bridge returned non-JSON (status ' + r.status + ')');
+                }
+                return r.json();
+            })
             .then(data => {
                 if (data && data.url) window.location.href = data.url;
-                else throw new Error('no_url');
+                else throw new Error('Bridge response missing url field');
             })
             .catch(err => {
-                toast('Connect failed — bridge offline?');
+                toast(err.message || 'Connect failed');
+                console.error('[cdhConnect]', err);
                 if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.innerHTML = '<i class="fas fa-link"></i> Connect Codedhost Account'; }
             });
         return false;
