@@ -270,6 +270,11 @@ setup_epel_repo() {
             yum install -y https://cyberpanel.sh/dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
             Check_Return "yum repo" "no_exit"
             ;;
+        "10")
+            # AlmaLinux 10 EPEL support
+            yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+            Check_Return "yum repo" "no_exit"
+            ;;
     esac
 }
 
@@ -309,11 +314,12 @@ gpgcheck=1
 EOF
     elif [[ "$Server_OS_Version" = "10" ]] && uname -m | grep -q 'x86_64'; then
         cat <<EOF >/etc/yum.repos.d/MariaDB.repo
-# MariaDB 10.11 CentOS repository list - created 2021-08-06 02:01 UTC
+# MariaDB 10.11 RHEL10 repository list - AlmaLinux 10 compatible
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
 name = MariaDB
-baseurl = http://yum.mariadb.org/10.11/rhel9-amd64/
+baseurl = http://yum.mariadb.org/10.11/rhel10-amd64/
+module_hotfixes=1
 gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 enabled=1
 gpgcheck=1
@@ -549,12 +555,14 @@ elif grep -q -E "Rocky Linux" /etc/os-release ; then
   Server_OS="RockyLinux"
 elif grep -q -E "Ubuntu 18.04|Ubuntu 20.04|Ubuntu 20.10|Ubuntu 22.04|Ubuntu 24.04" /etc/os-release ; then
   Server_OS="Ubuntu"
+elif grep -q -E "Debian GNU/Linux 11|Debian GNU/Linux 12|Debian GNU/Linux 13" /etc/os-release ; then
+  Server_OS="Debian"
 elif grep -q -E "openEuler 20.03|openEuler 22.03" /etc/os-release ; then
   Server_OS="openEuler"
 else
   echo -e "Unable to detect your system..."
-  echo -e "\nCyberPanel is supported on x86_64 based Ubuntu 18.04, Ubuntu 20.04, Ubuntu 20.10, Ubuntu 22.04, Ubuntu 24.04, Ubuntu 24.04.3, CentOS 7, CentOS 8, CentOS 9, RHEL 8, RHEL 9, AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, RockyLinux 8, CloudLinux 7, CloudLinux 8, openEuler 20.03, openEuler 22.03...\n"
-  Debug_Log2 "CyberPanel is supported on x86_64 based Ubuntu 18.04, Ubuntu 20.04, Ubuntu 20.10, Ubuntu 22.04, Ubuntu 24.04, Ubuntu 24.04.3, CentOS 7, CentOS 8, CentOS 9, RHEL 8, RHEL 9, AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, RockyLinux 8, CloudLinux 7, CloudLinux 8, openEuler 20.03, openEuler 22.03... [404]"
+  echo -e "\nCyberPanel is supported on x86_64 based Ubuntu 18.04, Ubuntu 20.04, Ubuntu 20.10, Ubuntu 22.04, Ubuntu 24.04, Ubuntu 24.04.3, Debian 11, Debian 12, Debian 13, CentOS 7, CentOS 8, CentOS 9, RHEL 8, RHEL 9, AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, RockyLinux 8, CloudLinux 7, CloudLinux 8, openEuler 20.03, openEuler 22.03...\n"
+  Debug_Log2 "CyberPanel is supported on x86_64 based Ubuntu 18.04, Ubuntu 20.04, Ubuntu 20.10, Ubuntu 22.04, Ubuntu 24.04, Ubuntu 24.04.3, Debian 11, Debian 12, Debian 13, CentOS 7, CentOS 8, CentOS 9, RHEL 8, RHEL 9, AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, RockyLinux 8, CloudLinux 7, CloudLinux 8, openEuler 20.03, openEuler 22.03... [404]"
   exit
 fi
 
@@ -568,6 +576,9 @@ if [[ $Server_OS = "CloudLinux" ]] || [[ "$Server_OS" = "AlmaLinux" ]] || [[ "$S
   Server_OS="CentOS"
   #CloudLinux gives version id like 7.8, 7.9, so cut it to show first number only
   #treat CloudLinux, Rocky and Alma as CentOS
+elif [[ "$Server_OS" = "Debian" ]] ; then
+  Server_OS="Ubuntu"
+  #Treat Debian as Ubuntu for package management (both use apt-get)
 fi
 
 if [[ "$Debug" = "On" ]] ; then
@@ -1112,8 +1123,14 @@ log_function_start "Pre_Install_Setup_Repository"
 log_info "Setting up package repositories for $Server_OS $Server_OS_Version"
 if [[ $Server_OS = "CentOS" ]] ; then
   log_debug "Importing LiteSpeed GPG key"
-  rpm --import https://cyberpanel.sh/rpms.litespeedtech.com/centos/RPM-GPG-KEY-litespeed
-  #import the LiteSpeed GPG key
+  # Import LiteSpeed GPG key with fallback
+  rpm --import https://cyberpanel.sh/rpms.litespeedtech.com/centos/RPM-GPG-KEY-litespeed || {
+    warning "Primary GPG key import failed, trying alternative source"
+    rpm --import https://rpms.litespeedtech.com/centos/RPM-GPG-KEY-litespeed || {
+      error "Failed to import LiteSpeed GPG key from all sources"
+      return 1
+    }
+  }
 
   yum clean all
   yum autoremove -y epel-release
@@ -1146,7 +1163,12 @@ if [[ $Server_OS = "CentOS" ]] ; then
       dnf config-manager --set-enabled crb
     fi
 
-    yum install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+    # Install appropriate remi-release based on version
+    if [[ "$Server_OS_Version" = "9" ]]; then
+      yum install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+    elif [[ "$Server_OS_Version" = "10" ]]; then
+      yum install -y https://rpms.remirepo.net/enterprise/remi-release-10.rpm
+    fi
       Check_Return "yum repo" "no_exit"
   fi
 
@@ -1336,8 +1358,22 @@ if [[ "$Server_OS" = "CentOS" ]] || [[ "$Server_OS" = "openEuler" ]] ; then
     #!/bin/bash
 
 
-    dnf install -y libnsl zip wget strace net-tools curl which bc telnet htop libevent-devel gcc libattr-devel xz-devel MariaDB-server MariaDB-client MariaDB-devel curl-devel git platform-python-devel tar socat python3 zip unzip bind-utils gpgme-devel openssl-devel
+    dnf install -y libnsl zip wget strace net-tools curl which bc telnet htop libevent-devel gcc libattr-devel xz-devel MariaDB-server MariaDB-client MariaDB-devel curl-devel git platform-python-devel tar socat python3 zip unzip bind-utils gpgme-devel openssl-devel boost-devel boost-program-options
       Check_Return
+    
+    # Fix boost library compatibility for galera-4 on AlmaLinux 10
+    if [[ "$Server_OS_Version" = "10" ]]; then
+      # Create symlink for boost libraries if needed
+      if [ ! -f /usr/lib64/libboost_program_options.so.1.75.0 ]; then
+        BOOST_VERSION=$(find /usr/lib64 -name "libboost_program_options.so.*" | head -1 | sed 's/.*libboost_program_options\.so\.//')
+        if [ -n "$BOOST_VERSION" ]; then
+          ln -sf /usr/lib64/libboost_program_options.so.$BOOST_VERSION /usr/lib64/libboost_program_options.so.1.75.0
+          log_info "Created boost library symlink for galera-4 compatibility: $BOOST_VERSION -> 1.75.0"
+        else
+          warning "Could not find boost libraries, galera-4 may not work properly"
+        fi
+      fi
+    fi
   elif [[ "$Server_OS_Version" = "20" ]] || [[ "$Server_OS_Version" = "22" ]] || [[ "$Server_OS_Version" = "24" ]] ; then
     dnf install -y libnsl zip wget strace net-tools curl which bc telnet htop libevent-devel gcc libattr-devel xz-devel mariadb-devel curl-devel git python3-devel tar socat python3 zip unzip bind-utils gpgme-devel
       Check_Return
@@ -1950,9 +1986,30 @@ Current_Dir="$(pwd)"
 rm -f /usr/local/lsws/cyberpanel-tmp
 mkdir /usr/local/lsws/cyberpanel-tmp
 cd /usr/local/lsws/cyberpanel-tmp || exit
+
+# Try to download timezonedb, but continue if it fails
 wget -O timezonedb.tgz https://cyberpanel.sh/pecl.php.net/get/timezonedb
+if [ ! -f timezonedb.tgz ] || [ ! -s timezonedb.tgz ]; then
+    log_info "WARNING: Failed to download timezonedb, skipping installation"
+    cd "$Current_Dir" || exit
+    rm -rf /usr/local/lsws/cyberpanel-tmp
+    return 0
+fi
+
 tar xzvf timezonedb.tgz
-cd timezonedb-*  || exit
+if [ ! -d timezonedb-* ]; then
+    log_info "WARNING: Failed to extract timezonedb, skipping installation"
+    cd "$Current_Dir" || exit
+    rm -rf /usr/local/lsws/cyberpanel-tmp
+    return 0
+fi
+
+cd timezonedb-* || {
+    log_info "WARNING: Cannot enter timezonedb directory, skipping installation"
+    cd "$Current_Dir" || exit
+    rm -rf /usr/local/lsws/cyberpanel-tmp
+    return 0
+}
 
 # Install required packages for building PHP extensions
 if [[ "$Server_OS" = "Ubuntu" ]] ; then
@@ -2278,7 +2335,7 @@ echo "echo \$@ > /etc/cyberpanel/adminPass" >> /usr/bin/adminPass
 chmod 700 /usr/bin/adminPass
 
 rm -f /usr/bin/php
-ln -s /usr/local/lsws/lsphp80/bin/php /usr/bin/php
+ln -s /usr/local/lsws/lsphp83/bin/php /usr/bin/php
 
 if [[ "$Server_OS" = "CentOS" ]] ; then
 #all centos 7/8 post change goes here

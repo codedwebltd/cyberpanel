@@ -89,7 +89,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'CyberCP.secMiddleware.secMiddleware'
+    'CyberCP.secMiddleware.secMiddleware',
+    'CyberCP.phpmyadminMiddleware.PhpMyAdminAccessMiddleware'
 ]
 
 ROOT_URLCONF = 'CyberCP.urls'
@@ -108,6 +109,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'baseTemplate.context_processors.version_context',
                 'baseTemplate.context_processors.cosmetic_context',
+                'baseTemplate.context_processors.notification_preferences_context',
             ],
         },
     },
