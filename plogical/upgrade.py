@@ -3544,7 +3544,7 @@ passdb {
 
             # Clone the new repository directly to CyberCP
             Upgrade.stdOut("Cloning fresh CyberPanel repository...")
-            command = 'git clone git@github-poc:codedwebltd/cyberpanel-poc.git CyberCP'
+            command = 'git clone https://github.com/codedwebltd/cyberpanel-poc.git CyberCP'
             if not Upgrade.executioner(command, command, 1):
                 # Try to restore backup if clone fails
                 Upgrade.stdOut("Clone failed, attempting to restore backup...")
