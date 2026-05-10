@@ -578,7 +578,7 @@ class preFlightsChecks:
 
         os.chdir('/usr/local')
 
-        command = "git clone https://github.com/codedwebltd/cyberpanel-poc cyberpanel"
+        command = "git clone https://github.com/codedwebltd/cyberpanel cyberpanel"
         preFlightsChecks.call(command, self.distro, command, command, 1, 1, os.EX_OSERR)
 
         shutil.move('cyberpanel', 'CyberCP')
