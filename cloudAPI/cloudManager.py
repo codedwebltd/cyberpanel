@@ -23,6 +23,7 @@ from serverStatus.views import topProcessesStatus, killProcess, switchTOLSWSStat
 from plogical import hashPassword
 from loginSystem.models import ACL
 from plogical.CyberCPLogFileWriter import CyberCPLogFileWriter as logging
+from plogical.securityUtils import api_token_matches
 from managePHP.phpManager import PHPManager
 from managePHP.views import submitExtensionRequest, getRequestStatusApache
 from containerization.views import *
@@ -43,13 +44,13 @@ class CloudManager:
 
     def verifyLogin(self, request):
         try:
-            if request.META['HTTP_AUTHORIZATION'] == self.admin.token:
+            if api_token_matches(request.META.get('HTTP_AUTHORIZATION'), self.admin.token):
                 return 1, self.ajaxPre(1, None)
             else:
                 return 0, self.ajaxPre(0, 'Invalid login information.')
 
         except BaseException as msg:
-            return self.ajaxPre(0, str(msg))
+            return 0, self.ajaxPre(0, str(msg))
 
     def fetchWebsites(self):
         try:

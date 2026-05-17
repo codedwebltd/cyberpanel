@@ -158,7 +158,22 @@ class FileManager:
         return HttpResponse(final_json)
 
     def returnPathEnclosed(self, path):
-        return "'" + path + "'"
+        return "'" + str(path).replace("'", "'\"'\"'") + "'"
+
+    def validPermissions(self, permissions):
+        try:
+            permissions = str(permissions)
+            return len(permissions) in (3, 4) and all(ch in '01234567' for ch in permissions)
+        except:
+            return False
+
+    def pathInside(self, path, root):
+        try:
+            real_path = os.path.realpath(path)
+            real_root = os.path.realpath(root)
+            return os.path.commonpath([real_path, real_root]) == real_root
+        except:
+            return False
 
     def changeOwner(self, path):
         try:
@@ -319,7 +334,7 @@ class FileManager:
 
                 command = "touch " + self.returnPathEnclosed(self.data['fileName'])
                 ProcessUtilities.executioner(command, website.externalApp)
-                self.changeOwner(self.returnPathEnclosed(self.data['fileName']))
+                self.changeOwner(self.data['fileName'])
             except:
                 homePath = '/'
 
@@ -328,7 +343,7 @@ class FileManager:
 
                 command = "touch " + self.returnPathEnclosed(self.data['fileName'])
                 ProcessUtilities.executioner(command)
-                self.changeOwner(self.returnPathEnclosed(self.data['fileName']))
+                self.changeOwner(self.data['fileName'])
 
             json_data = json.dumps(finalData)
             return HttpResponse(json_data)
@@ -351,7 +366,7 @@ class FileManager:
                 command = "mkdir " + self.returnPathEnclosed(self.data['folderName'])
                 ProcessUtilities.executioner(command, website.externalApp)
 
-                self.changeOwner(self.returnPathEnclosed(self.data['folderName']))
+                self.changeOwner(self.data['folderName'])
             except:
                 homePath = '/'
 
@@ -361,7 +376,7 @@ class FileManager:
                 command = "mkdir " + self.returnPathEnclosed(self.data['folderName'])
                 ProcessUtilities.executioner(command)
 
-                self.changeOwner(self.returnPathEnclosed(self.data['folderName']))
+                self.changeOwner(self.data['folderName'])
 
 
             json_data = json.dumps(finalData)
@@ -386,17 +401,17 @@ class FileManager:
 
                 RemoveOK = 1
 
-                command = 'touch %s/hello.txt' % (self.homePath)
+                command = 'touch %s' % (self.returnPathEnclosed(self.homePath + '/hello.txt'))
                 result = ProcessUtilities.outputExecutioner(command)
 
                 if result.find('No such file or directory') > -1:
                     RemoveOK = 0
 
-                    command = 'chattr -R -i %s' % (self.homePath)
+                    command = 'chattr -R -i %s' % (self.returnPathEnclosed(self.homePath))
                     ProcessUtilities.executioner(command)
 
                 else:
-                    command = 'rm -f %s/hello.txt' % (self.homePath)
+                    command = 'rm -f %s' % (self.returnPathEnclosed(self.homePath + '/hello.txt'))
                     ProcessUtilities.executioner(command)
 
 
@@ -412,17 +427,19 @@ class FileManager:
                     else:
                         trashPath = '%s/.trash' % (self.homePath)
 
-                        command = 'mkdir %s' % (trashPath)
+                        command = 'mkdir %s' % (self.returnPathEnclosed(trashPath))
                         ProcessUtilities.executioner(command, website.externalApp)
 
                         Trash(website=website, originalPath=self.returnPathEnclosed(self.data['path']),
                               fileName=self.returnPathEnclosed(item)).save()
 
-                        command = 'mv %s %s' % (self.returnPathEnclosed(self.data['path'] + '/' + item), trashPath)
+                        command = 'mv %s %s' % (
+                            self.returnPathEnclosed(self.data['path'] + '/' + item),
+                            self.returnPathEnclosed(trashPath))
                         ProcessUtilities.executioner(command, website.externalApp)
 
                 if RemoveOK == 0:
-                    command = 'chattr -R +i %s' % (self.homePath)
+                    command = 'chattr -R +i %s' % (self.returnPathEnclosed(self.homePath))
                     ProcessUtilities.executioner(command)
             except:
                 try:
@@ -435,17 +452,17 @@ class FileManager:
 
                 RemoveOK = 1
 
-                command = 'touch %s/hello.txt' % (self.homePath)
+                command = 'touch %s' % (self.returnPathEnclosed(self.homePath + '/hello.txt'))
                 result = ProcessUtilities.outputExecutioner(command)
 
                 if result.find('No such file or directory') > -1:
                     RemoveOK = 0
 
-                    command = 'chattr -R -i %s' % (self.homePath)
+                    command = 'chattr -R -i %s' % (self.returnPathEnclosed(self.homePath))
                     ProcessUtilities.executioner(command)
 
                 else:
-                    command = 'rm -f %s/hello.txt' % (self.homePath)
+                    command = 'rm -f %s' % (self.returnPathEnclosed(self.homePath + '/hello.txt'))
                     ProcessUtilities.executioner(command)
 
                 for item in self.data['fileAndFolders']:
@@ -460,7 +477,7 @@ class FileManager:
 
 
                 if RemoveOK == 0:
-                    command = 'chattr -R +i %s' % (self.homePath)
+                    command = 'chattr -R +i %s' % (self.returnPathEnclosed(self.homePath))
                     ProcessUtilities.executioner(command)
 
             json_data = json.dumps(finalData)
@@ -528,7 +545,7 @@ class FileManager:
 
                     command = 'yes| cp -Rf %s %s' % (
                         self.returnPathEnclosed(self.data['basePath'] + '/' + self.data['fileAndFolders'][0]),
-                        self.data['newPath'])
+                        self.returnPathEnclosed(self.data['newPath']))
                     ProcessUtilities.executioner(command, website.externalApp)
                     self.changeOwner(self.data['newPath'])
                     json_data = json.dumps(finalData)
@@ -563,7 +580,7 @@ class FileManager:
 
                     command = 'yes| cp -Rf %s %s' % (
                         self.returnPathEnclosed(self.data['basePath'] + '/' + self.data['fileAndFolders'][0]),
-                        self.data['newPath'])
+                        self.returnPathEnclosed(self.data['newPath']))
                     ProcessUtilities.executioner(command,)
                     self.changeOwner(self.data['newPath'])
                     json_data = json.dumps(finalData)
@@ -753,6 +770,9 @@ class FileManager:
                 domainName = self.data['domainName']
                 website = Websites.objects.get(domain=domainName)
 
+                if not self.pathInside(self.data['fileName'], self.data['home']):
+                    return self.ajaxPre(0, 'Not allowed.')
+
                 writeToFile = open(tempPath, 'wb')
                 writeToFile.write(self.data['fileContent'].encode('utf-8'))
                 writeToFile.close()
@@ -765,7 +785,13 @@ class FileManager:
 
                 os.remove(tempPath)
             except:
+                if self.data.get('domainName', '') != '':
+                    return self.ajaxPre(0, 'Not allowed.')
+
                 self.data['home'] = '/'
+
+                if self.data['fileName'].find('..') > -1 or not self.data['fileName'].startswith('/'):
+                    return self.ajaxPre(0, 'Not allowed.')
 
                 ACLManager.CreateSecureDir()
                 tempPath = '%s/%s' % ('/usr/local/CyberCP/tmp', str(randint(1000, 9999)))
@@ -815,7 +841,7 @@ class FileManager:
                 pathCheck = '/home/%s' % (self.data['domainName'])
                 website = Websites.objects.get(domain=domainName)
 
-                command = 'ls -la %s' % (self.data['completePath'])
+                command = 'ls -la %s' % (self.returnPathEnclosed(self.data['completePath']))
                 result = ProcessUtilities.outputExecutioner(command, website.externalApp)
                 #
                 if result.find('->') > -1:
@@ -833,14 +859,14 @@ class FileManager:
                     self.data['completePath'] + '/' + myfile.name)
                 ProcessUtilities.executioner(command, website.externalApp)
 
-                self.changeOwner(self.returnPathEnclosed(self.data['completePath'] + '/' + myfile.name))
+                self.changeOwner(self.data['completePath'] + '/' + myfile.name)
                 try:
                     os.remove(UploadPath + RanddomFileName)
                 except:
                     pass
             except:
                 pathCheck = '/'
-                command = 'ls -la %s' % (self.data['completePath'])
+                command = 'ls -la %s' % (self.returnPathEnclosed(self.data['completePath']))
                 result = ProcessUtilities.outputExecutioner(command)
                 logging.writeToFile("upload file res %s" % result)
                 if ACLManager.commandInjectionCheck(self.data['completePath'] + '/' + myfile.name) == 1:
@@ -855,7 +881,7 @@ class FileManager:
                     self.data['completePath'] + '/' + myfile.name)
                 ProcessUtilities.executioner(command)
 
-                self.changeOwner(self.returnPathEnclosed(self.data['completePath'] + '/' + myfile.name))
+                self.changeOwner(self.data['completePath'] + '/' + myfile.name)
                 try:
                     os.remove(UploadPath + RanddomFileName)
                 except:
@@ -958,7 +984,7 @@ class FileManager:
 
                     command = '%s%s ' % (command, self.returnPathEnclosed(item))
 
-                finalCommand = 'cd %s && %s' % (self.data['basePath'], command)
+                finalCommand = 'cd %s && %s' % (self.returnPathEnclosed(self.data['basePath']), command)
 
                 ProcessUtilities.executioner(finalCommand, website.externalApp)
 
@@ -982,7 +1008,7 @@ class FileManager:
                         return self.ajaxPre(0, 'Not allowed to move in this path, please choose location inside home!')
                     command = '%s%s ' % (command, self.returnPathEnclosed(item))
 
-                finalCommand = 'cd %s && %s' % (self.data['basePath'], command)
+                finalCommand = 'cd %s && %s' % (self.returnPathEnclosed(self.data['basePath']), command)
 
                 res = ProcessUtilities.outputExecutioner(finalCommand, "root")
                 logging.writeToFile("compress file res %s"%res)
@@ -1002,6 +1028,9 @@ class FileManager:
             finalData['status'] = 1
             domainName = self.data['domainName']
             website = Websites.objects.get(domain=domainName)
+
+            if not self.validPermissions(self.data['newPermissions']):
+                return self.ajaxPre(0, 'Invalid permissions.')
 
             if self.data['recursive'] == 1:
                 command = 'chmod -R ' + self.data['newPermissions'] + ' ' + self.returnPathEnclosed(
@@ -1030,7 +1059,10 @@ class FileManager:
 
         ### symlink checks
 
-        command = 'ls -la /home/%s' % domainName
+        homePath = '/home/%s' % domainName
+        publicHtmlPath = '%s/public_html' % homePath
+
+        command = 'ls -la %s' % self.returnPathEnclosed(homePath)
         result = ProcessUtilities.outputExecutioner(command)
 
         if result.find('->') > -1:
@@ -1040,12 +1072,12 @@ class FileManager:
             return HttpResponse(final_json)
 
         # Set home directory ownership
-        command = 'chown %s:%s /home/%s' % (website.externalApp, website.externalApp, domainName)
+        command = 'chown %s:%s %s' % (website.externalApp, website.externalApp, self.returnPathEnclosed(homePath))
         ProcessUtilities.executioner(command)
 
         ### Sym link checks
 
-        command = 'ls -la /home/%s/public_html/' % domainName
+        command = 'ls -la %s' % self.returnPathEnclosed(publicHtmlPath)
         result = ProcessUtilities.outputExecutioner(command)
 
         if result.find('->') > -1:
@@ -1055,22 +1087,25 @@ class FileManager:
             return HttpResponse(final_json)
 
         # Set file permissions first (before ownership to avoid conflicts)
-        command = "find %s -type d -exec chmod 0755 {} \;" % ("/home/" + domainName + "/public_html")
+        command = "find %s -type d -exec chmod 0755 {} \;" % self.returnPathEnclosed(publicHtmlPath)
         ProcessUtilities.executioner(command)
 
-        command = "find %s -type f -exec chmod 0644 {} \;" % ("/home/" + domainName + "/public_html")
+        command = "find %s -type f -exec chmod 0644 {} \;" % self.returnPathEnclosed(publicHtmlPath)
         ProcessUtilities.executioner(command)
 
         # Set ownership for all files inside public_html to user:user
-        command = 'chown -R -P %s:%s /home/%s/public_html/*' % (externalApp, externalApp, domainName)
+        command = 'chown -R -P %s:%s %s/*' % (externalApp, externalApp, self.returnPathEnclosed(publicHtmlPath))
         ProcessUtilities.executioner(command)
 
-        command = 'chown -R -P %s:%s /home/%s/public_html/.[^.]*' % (externalApp, externalApp, domainName)
+        command = 'chown -R -P %s:%s %s/.[^.]*' % (externalApp, externalApp, self.returnPathEnclosed(publicHtmlPath))
         ProcessUtilities.executioner(command)
 
         # Process child domains first
         for childs in website.childdomains_set.all():
-            command = 'ls -la %s' % childs.path
+            childPath = childs.path
+            childPathArg = self.returnPathEnclosed(childPath)
+
+            command = 'ls -la %s' % childPathArg
             result = ProcessUtilities.outputExecutioner(command)
 
             if result.find('->') > -1:
@@ -1080,29 +1115,29 @@ class FileManager:
                 return HttpResponse(final_json)
 
             # Set file permissions first
-            command = "find %s -type d -exec chmod 0755 {} \;" % (childs.path)
+            command = "find %s -type d -exec chmod 0755 {} \;" % childPathArg
             ProcessUtilities.executioner(command)
 
-            command = "find %s -type f -exec chmod 0644 {} \;" % (childs.path)
+            command = "find %s -type f -exec chmod 0644 {} \;" % childPathArg
             ProcessUtilities.executioner(command)
 
             # Set ownership for all files inside child domain to user:user
-            command = 'chown -R -P %s:%s %s/*' % (externalApp, externalApp, childs.path)
+            command = 'chown -R -P %s:%s %s/*' % (externalApp, externalApp, childPathArg)
             ProcessUtilities.executioner(command)
 
-            command = 'chown -R -P %s:%s %s/.[^.]*' % (externalApp, externalApp, childs.path)
+            command = 'chown -R -P %s:%s %s/.[^.]*' % (externalApp, externalApp, childPathArg)
             ProcessUtilities.executioner(command)
 
             # Set child domain directory itself to 755 with user:nogroup
-            command = 'chmod 755 %s' % (childs.path)
+            command = 'chmod 755 %s' % childPathArg
             ProcessUtilities.executioner(command)
 
-            command = 'chown %s:%s %s' % (externalApp, groupName, childs.path)
+            command = 'chown %s:%s %s' % (externalApp, groupName, childPathArg)
             ProcessUtilities.executioner(command)
 
         # Set public_html directory itself to user:nogroup with 750 permissions (done at the end)
-        command = 'chown %s:%s /home/%s/public_html' % (externalApp, groupName, domainName)
+        command = 'chown %s:%s %s' % (externalApp, groupName, self.returnPathEnclosed(publicHtmlPath))
         ProcessUtilities.executioner(command)
 
-        command = 'chmod 750 /home/%s/public_html' % (domainName)
+        command = 'chmod 750 %s' % self.returnPathEnclosed(publicHtmlPath)
         ProcessUtilities.executioner(command)
