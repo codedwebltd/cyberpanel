@@ -5,7 +5,10 @@ import json
 from loginSystem.models import Administrator
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import HttpResponse
-from django.utils.http import url_has_allowed_host_and_scheme
+try:
+    from django.utils.http import url_has_allowed_host_and_scheme
+except ImportError:
+    from django.utils.http import is_safe_url as url_has_allowed_host_and_scheme
 from plogical.securityUtils import api_token_matches
 
 @csrf_exempt
