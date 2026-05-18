@@ -21,6 +21,7 @@ from plogical.processUtilities import ProcessUtilities
 from django.views.decorators.csrf import csrf_exempt
 from userManagment.views import submitUserCreation as suc
 from userManagment.views import submitUserDeletion as duc
+from plogical.acl import ACLManager
 from plogical.securityUtils import api_token_matches, is_safe_numeric_id, is_safe_port, is_safe_remote_host
 # Create your views here.
 
@@ -81,6 +82,31 @@ def api_auth_response(auth_error, status_key='status', extra=None):
     if extra:
         data.update(extra)
     return HttpResponse(json.dumps(data))
+
+
+def can_change_api_account_password(admin, target_admin):
+    if admin.pk == target_admin.pk:
+        return True
+
+    try:
+        current_acl = ACLManager.loadedACL(admin.pk)
+        return current_acl.get('admin', 0) == 1
+    except:
+        return False
+
+
+def can_change_api_website_package(admin, website, package):
+    try:
+        current_acl = ACLManager.loadedACL(admin.pk)
+        if ACLManager.currentContextPermission(current_acl, 'modifyWebsite') != 1:
+            return False
+        if ACLManager.checkOwnership(website.domain, admin, current_acl) != 1:
+            return False
+        if ACLManager.CheckPackageOwnership(package, admin, current_acl) != 1:
+            return False
+        return True
+    except:
+        return False
 
 
 @csrf_exempt
@@ -247,6 +273,11 @@ def changeUserPassAPI(request):
                 return api_auth_response(auth_error, 'changeStatus')
 
             websiteOwn = Administrator.objects.get(userName=websiteOwner)
+            if not can_change_api_account_password(admin, websiteOwn):
+                data_ret = {'changeStatus': 0,
+                            'error_message': 'Not authorized to modify this account.'}
+                return HttpResponse(json.dumps(data_ret))
+
             websiteOwn.password = hashPassword.hash_password(ownerPassword)
             websiteOwn.save()
 
@@ -295,6 +326,9 @@ def changePackageAPI(request):
 
             website = Websites.objects.get(domain=websiteName)
             pack = Package.objects.get(packageName=packageName)
+
+            if not can_change_api_website_package(admin, website, pack):
+                return ACLManager.loadErrorJson('changePackage', 0)
 
             website.package = pack
             website.save()

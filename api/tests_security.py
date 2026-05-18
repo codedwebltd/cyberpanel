@@ -1,5 +1,7 @@
 import os
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
@@ -12,6 +14,7 @@ from plogical.securityUtils import (
     is_safe_port,
     is_safe_remote_host,
 )
+from api.views import can_change_api_account_password, can_change_api_website_package
 
 
 class SecurityUtilsTests(SimpleTestCase):
@@ -73,3 +76,38 @@ class SecurityUtilsTests(SimpleTestCase):
         self.assertFalse(is_safe_port("70000"))
         self.assertTrue(is_safe_remote_host("host.example.com"))
         self.assertFalse(is_safe_remote_host("host;rm"))
+
+    def test_api_password_change_allows_self_service(self):
+        admin = SimpleNamespace(pk=10)
+        self.assertTrue(can_change_api_account_password(admin, admin))
+
+    def test_api_password_change_blocks_non_admin_cross_account(self):
+        caller = SimpleNamespace(pk=10)
+        target = SimpleNamespace(pk=1)
+
+        with patch("api.views.ACLManager.loadedACL", return_value={"admin": 0}):
+            self.assertFalse(can_change_api_account_password(caller, target))
+
+    def test_api_password_change_allows_super_admin_cross_account(self):
+        caller = SimpleNamespace(pk=1)
+        target = SimpleNamespace(pk=10)
+
+        with patch("api.views.ACLManager.loadedACL", return_value={"admin": 1}):
+            self.assertTrue(can_change_api_account_password(caller, target))
+
+    def test_api_change_package_requires_permission_ownership_and_package_access(self):
+        admin = SimpleNamespace(pk=10)
+        website = SimpleNamespace(domain="example.com")
+        package = SimpleNamespace(packageName="reseller_package")
+
+        with patch("api.views.ACLManager.loadedACL", return_value={"admin": 0}), \
+                patch("api.views.ACLManager.currentContextPermission", return_value=1), \
+                patch("api.views.ACLManager.checkOwnership", return_value=1), \
+                patch("api.views.ACLManager.CheckPackageOwnership", return_value=1):
+            self.assertTrue(can_change_api_website_package(admin, website, package))
+
+        with patch("api.views.ACLManager.loadedACL", return_value={"admin": 0}), \
+                patch("api.views.ACLManager.currentContextPermission", return_value=1), \
+                patch("api.views.ACLManager.checkOwnership", return_value=0), \
+                patch("api.views.ACLManager.CheckPackageOwnership", return_value=1):
+            self.assertFalse(can_change_api_website_package(admin, website, package))
