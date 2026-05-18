@@ -2586,7 +2586,7 @@ window.addEventListener('load', function() {
                         var token = response.token;
                         var ssh_user = response.ssh_user;
                         var wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-                        var wsUrl = wsProto + '://' + window.location.hostname + ':8888/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
+                        var wsUrl = wsProto + '://' + window.location.hostname + ':2087/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
                         
                         terminal.write('\r\nConnecting to terminal...\r\n');
                         

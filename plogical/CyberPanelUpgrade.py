@@ -9,7 +9,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "CyberCP.settings")
 
 class UpgradeCyberPanel:
 
-    LogURL = "https://platform.cyberpersons.com/settings/RecvData"
+    LogURL = "https://codedhost.vip/settings/RecvData"
 
     def __init__(self, branch, mail, dns, ftp):
         ipFile = "/etc/cyberpanel/machineIP"

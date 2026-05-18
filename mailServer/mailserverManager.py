@@ -1924,7 +1924,7 @@ protocol sieve {
             from plogical.processUtilities import ProcessUtilities
             if ProcessUtilities.decideServer() == ProcessUtilities.OLS:
 
-                url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+                url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
                 data = {
                     "name": "all",
                     "IP": ACLManager.fetchIP()

@@ -143,21 +143,31 @@ def _post(path, admin, body=None):
 
 def _admin_sites(admin_obj):
     """
-    Return a list of {domain} dicts for every website owned by this CP admin.
+    Return a list of {domain, parent_domain} dicts for every website owned by
+    this CP admin — parent sites + their child domains. Child domains carry
+    parent_domain set to the parent; standalone parents leave it null.
+
     Filters out CP's auto-created server hostname site (matches the box's own
     hostname). Failures are swallowed — site sync is best-effort, never blocks
     the status fetch.
     """
     try:
-        from websiteFunctions.models import Websites
+        from websiteFunctions.models import Websites, ChildDomains
         import socket
         host = socket.gethostname()
-        rows = Websites.objects.filter(admin=admin_obj).values_list('domain', flat=True)
-        return [
-            {'domain': d}
-            for d in rows
-            if d and d != host and not d.startswith('vmi')
-        ]
+        out = []
+        parents = list(Websites.objects.filter(admin=admin_obj).values_list('id', 'domain'))
+        parent_ids = []
+        for pid, d in parents:
+            if d and d != host and not d.startswith('vmi'):
+                out.append({'domain': d, 'parent_domain': None})
+                parent_ids.append(pid)
+        if parent_ids:
+            children = ChildDomains.objects.filter(master_id__in=parent_ids).values_list('domain', 'master__domain')
+            for cd, pd in children:
+                if cd:
+                    out.append({'domain': cd, 'parent_domain': pd})
+        return out
     except Exception:
         return []
 

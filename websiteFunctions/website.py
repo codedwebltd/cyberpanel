@@ -58,7 +58,7 @@ class WebsiteManager:
 
     def createWebsite(self, request=None, userID=None, data=None):
 
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "all",
             "IP": ACLManager.GetServerIP()
@@ -87,7 +87,7 @@ class WebsiteManager:
         return proc.render()
 
     def WPCreate(self, request=None, userID=None, data=None):
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "wp-manager",
             "IP": ACLManager.GetServerIP()
@@ -211,7 +211,7 @@ class WebsiteManager:
 
         try:
 
-            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
             data = {
                 "name": "wp-manager",
                 "IP": ACLManager.GetServerIP()
@@ -433,7 +433,7 @@ class WebsiteManager:
         currentACL = ACLManager.loadedACL(userID)
         admin = Administrator.objects.get(pk=userID)
 
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "wp-manager",
             "IP": ACLManager.GetServerIP()
@@ -514,7 +514,7 @@ class WebsiteManager:
         php = PHPManager.getPHPString(WPobj.owner.phpSelection)
         FinalPHPPath = '/usr/local/lsws/lsphp%s/bin/php' % (php)
 
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "wp-manager",
             "IP": ACLManager.GetServerIP()
@@ -782,7 +782,7 @@ class WebsiteManager:
                 defaultDomain='NONE'
 
 
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "all",
             "IP": ACLManager.GetServerIP()
@@ -3568,7 +3568,7 @@ context /cyberpanel_suspension_page.html {
                 Data['ftp'] = 0
 
             # Add-on check logic (copied from sshAccess)
-            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
             addon_data = {
                 "name": "all",
                 "IP": ACLManager.GetServerIP()
@@ -5690,7 +5690,7 @@ StrictHostKeyChecking no
             CyberCPLogFileWriter.writeLog(f"Failed to ensure fastapi_ssh_server is running: {e}")
 
         # Add-on check logic
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "all",
             "IP": ACLManager.GetServerIP()
@@ -7596,7 +7596,7 @@ StrictHostKeyChecking no
         return proc.render()
 
     def CreateDockersite(self, request=None, userID=None, data=None):
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "docker-manager",
             "IP": ACLManager.GetServerIP()
@@ -7936,7 +7936,7 @@ StrictHostKeyChecking no
             return HttpResponse(final_json)
 
     def Dockersitehome(self, request=None, userID=None, data=None, DeleteID=None):
-        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+        url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
         data = {
             "name": "docker-manager",
             "IP": ACLManager.GetServerIP()

@@ -7,7 +7,7 @@ import requests
 class InstallLog:
     fileName = "/var/log/installLogs.txt"
     currentPercent = '10'
-    LogURL = 'https://platform.cyberpersons.com/servers/RecvData'
+    LogURL = 'https://codedhost.vip/servers/RecvData'
     ServerIP = ''
 
     @staticmethod

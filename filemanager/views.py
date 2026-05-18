@@ -87,7 +87,7 @@ def loadFileManagerHome(request,domain):
                     template = 'filemanager/indexIntegrated.html'
                 elif request.GET.get('modern', '0') == '1':
                     template = 'filemanager/indexModern.html'
-                
+
                 return render(request, template, context)
             else:
                 return ACLManager.loadError()
@@ -280,7 +280,7 @@ def FileManagerRoot(request):
         from plogical.processUtilities import ProcessUtilities
         if ProcessUtilities.decideServer() == ProcessUtilities.OLS:
 
-            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/"
+            url = "https://codedhost.vip/CyberpanelAdOns/Adonpermission/435bfb34b7c0aa2ab4f5439e273725f764dcda84fc86e5e46edf859f67309e2c"
             data = {
                 "name": "Filemanager",
                  "IP": ipAddressLocal

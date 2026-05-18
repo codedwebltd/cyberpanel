@@ -646,7 +646,7 @@
         <div class="cdh-card">
             <div class="cdh-card-header">
                 <h3 class="cdh-card-title"><i class="fas fa-database"></i> Storage usage</h3>
-                <a href="#" class="cdh-btn-secondary cdh-btn-sm" onclick="return false"><i class="fas fa-arrow-up"></i> Upgrade plan</a>
+                <a href="https://codedhost.vip/account/backup-plan" target="_blank" rel="noopener" class="cdh-btn-secondary cdh-btn-sm"><i class="fas fa-arrow-up"></i> Upgrade plan</a>
             </div>
             <div class="cdh-card-body">
                 <div class="cdh-quota-head">
@@ -943,13 +943,20 @@
                     <i class="fas fa-check"></i>
                 </div>
                 <div class="cdh-site-info">
-                    <div class="domain">${esc(s.domain)}</div>
+                    <div class="domain">
+                        ${esc(s.domain)}
+                        ${s.parent_domain
+                            ? `<span style="display:inline-block; margin-left:.4rem; padding:.05rem .35rem; font-size:.6rem; font-family:ui-monospace,monospace; letter-spacing:.06em; text-transform:uppercase; color:#9a3412; background:#fef3c7; border:1px solid #fde68a; border-radius:.3rem; vertical-align:middle;">add-on · upgrade to back up</span>`
+                            : ''}
+                    </div>
                     <div class="meta">${
-                        s.backup_bytes
-                            ? `R2: ${esc(fmtBytes(s.backup_bytes))} · Site: ${esc(fmtBytes(s.source_bytes||0))}`
-                            : (s.source_bytes
-                                ? `Site: ${esc(fmtBytes(s.source_bytes))} · Not yet backed up`
-                                : (s.tag === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up'))
+                        s.parent_domain
+                            ? `Child of ${esc(s.parent_domain)}`
+                            : (s.backup_bytes
+                                ? `R2: ${esc(fmtBytes(s.backup_bytes))} · Site: ${esc(fmtBytes(s.source_bytes||0))}`
+                                : (s.source_bytes
+                                    ? `Site: ${esc(fmtBytes(s.source_bytes))} · Not yet backed up`
+                                    : (s.tag === 'new' ? 'Detected from CyberPanel · not yet backed' : 'Never backed up')))
                     }</div>
                 </div>
                 <span class="cdh-site-tag ${s.tag === 'new' ? 'is-new' : 'is-active'}">${s.tag === 'new' ? 'New' : 'Active'}</span>
@@ -985,8 +992,19 @@
             body: JSON.stringify({ site_id: siteId, in_rotation: inRotation }),
         }).then(async r => {
             if (!r.ok) {
-                const body = await r.text().catch(() => '');
-                throw new Error(`${r.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+                // Prefer a JSON message body (upgrade gate, validation, etc.)
+                // and fall through to text/status otherwise.
+                let msg = `HTTP ${r.status}`;
+                try {
+                    const j = await r.clone().json();
+                    if (j && j.message) msg = j.message;
+                } catch (_) {
+                    const body = await r.text().catch(() => '');
+                    if (body) msg = body.slice(0, 200);
+                }
+                const err = new Error(msg);
+                err.status = r.status;
+                throw err;
             }
             return r.json();
         });

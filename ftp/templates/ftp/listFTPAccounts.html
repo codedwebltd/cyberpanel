@@ -440,6 +440,70 @@
                             </div>
                         </div>
 
+                        <!-- Connection details (codedhost custom) -->
+                        <div ng-hide="ftpAccounts" class="ch-ftp-conn">
+                            <div class="ch-ftp-conn-head">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>{% trans "Connection details — share with users" %}</strong>
+                            </div>
+                            <div class="ch-ftp-conn-grid">
+                                <div class="ch-ftp-conn-cell">
+                                    <span class="ch-ftp-conn-label">{% trans "Host" %}</span>
+                                    <code id="ch-ftp-host">server.codedhost.vip</code>
+                                </div>
+                                <div class="ch-ftp-conn-cell">
+                                    <span class="ch-ftp-conn-label">{% trans "Port" %}</span>
+                                    <code>21</code>
+                                </div>
+                                <div class="ch-ftp-conn-cell">
+                                    <span class="ch-ftp-conn-label">{% trans "Encryption" %}</span>
+                                    <code>{% trans "Explicit FTPS (FTPES)" %}</code>
+                                </div>
+                                <div class="ch-ftp-conn-cell ch-ftp-conn-wide">
+                                    <span class="ch-ftp-conn-label">{% trans "Quick string" %}</span>
+                                    <code id="ch-ftp-string">ftp://USERNAME@server.codedhost.vip:21</code>
+                                </div>
+                            </div>
+                            <div class="ch-ftp-conn-note">
+                                {% trans "Replace USERNAME with the FTP user from the table below. Tell clients to set encryption to" %} <strong>{% trans "Explicit FTPS" %}</strong> {% trans "in their FTP client (FileZilla, Cyberduck etc)." %}
+                            </div>
+                        </div>
+                        <style>
+                            .ch-ftp-conn {
+                                background: linear-gradient(135deg, rgba(91, 95, 207, .06), rgba(91, 95, 207, .02));
+                                border: 1px solid rgba(91, 95, 207, .25);
+                                border-radius: 12px;
+                                padding: 18px 22px;
+                                margin-bottom: 22px;
+                            }
+                            .ch-ftp-conn-head { display: flex; align-items: center; gap: 8px; color: var(--accent-color, #5b5fcf); margin-bottom: 14px; font-size: 14px; }
+                            .ch-ftp-conn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 18px; }
+                            .ch-ftp-conn-wide { grid-column: 1 / -1; }
+                            .ch-ftp-conn-cell { display: flex; flex-direction: column; gap: 4px; }
+                            .ch-ftp-conn-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+                            .ch-ftp-conn code {
+                                background: rgba(0,0,0,0.04);
+                                border: 1px solid rgba(0,0,0,0.08);
+                                padding: 6px 10px;
+                                border-radius: 6px;
+                                font-family: 'SF Mono', Monaco, Consolas, monospace;
+                                font-size: 13px;
+                                color: #333;
+                                word-break: break-all;
+                            }
+                            .ch-ftp-conn-note { margin-top: 12px; font-size: 12px; color: #666; line-height: 1.5; }
+                        </style>
+                        <script>
+                        (function(){
+                            var hn = window.location.hostname || 'server.codedhost.vip';
+                            if (hn.indexOf('panel.') === 0) hn = 'server.' + hn.substring(6);
+                            var h = document.getElementById('ch-ftp-host');
+                            var s = document.getElementById('ch-ftp-string');
+                            if (h) h.textContent = hn;
+                            if (s) s.textContent = 'ftp://USERNAME@' + hn + ':21';
+                        })();
+                        </script>
+
                         <!-- FTP Accounts Table -->
                         <div ng-hide="ftpAccounts">
                             <table class="ftp-table">

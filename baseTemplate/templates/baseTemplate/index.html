@@ -1330,7 +1330,13 @@
             </div>
             <span>Knowledge Base</span>
         </a>
-        
+        <a href="{% url 'logout' %}" class="menu-item">
+            <div class="icon-wrapper">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <span>Logout</span>
+        </a>
+
         <div class="section-header">MAIN</div>
             
         <a href="#" class="menu-item" onclick="toggleSubmenu('users-submenu', this); return false;">
@@ -1467,6 +1473,8 @@
                 {% endif %}
             </div>
             
+            {# CODEDHOST: Packages hidden from non-admins — admin-only tool. #}
+            {% if admin %}
             <a href="#" class="menu-item" onclick="toggleSubmenu('packages-submenu', this); return false;">
                 <div class="icon-wrapper">
                     <i class="fas fa-cube"></i>
@@ -1475,27 +1483,20 @@
                 <i class="fas fa-chevron-right chevron"></i>
             </a>
             <div id="packages-submenu" class="submenu">
-                {% if admin or createPackage %}
                 <a href="{% url 'createPackage' %}" class="menu-item">
                     <span>Create Package</span>
                 </a>
-                {% endif %}
-                {% if admin or listPackages %}
                 <a href="{% url 'listPackages' %}" class="menu-item">
                     <span>List Packages</span>
                 </a>
-                {% endif %}
-                {% if admin or deletePackage %}
                 <a href="{% url 'deletePackage' %}" class="menu-item">
                     <span>Delete Package</span>
                 </a>
-                {% endif %}
-                {% if admin or modifyPackage %}
                 <a href="{% url 'modifyPackage' %}" class="menu-item">
                     <span>Modify Package</span>
                 </a>
-                {% endif %}
             </div>
+            {% endif %}
             
             <a href="#" class="menu-item" onclick="toggleSubmenu('databases-submenu', this); return false;">
                 <div class="icon-wrapper">
@@ -1719,6 +1720,8 @@
                 {% endif %}
         </div>
             
+        {# CODEDHOST: Incremental Backup hidden from non-admins — admin-only tool. #}
+        {% if admin %}
         <a href="#" class="menu-item" onclick="toggleSubmenu('incremental-backup-submenu', this); return false;">
             <div class="icon-wrapper">
                 <i class="fas fa-save"></i>
@@ -1727,15 +1730,14 @@
             <i class="fas fa-chevron-right chevron"></i>
         </a>
         <div id="incremental-backup-submenu" class="submenu">
-            {% if admin or createBackup %}
             <a href="{% url 'backupDestinationsInc' %}" class="menu-item">
                 <span>Backups v2</span>
             </a>
             <a href="{% url 'createBackupInc' %}" class="menu-item">
                 <span>v1 (Deprecated)</span>
             </a>
-            {% endif %}
         </div>
+        {% endif %}
             
         <a href="#" class="menu-item" onclick="toggleSubmenu('ssl-submenu', this); return false;">
             <div class="icon-wrapper">
@@ -2268,9 +2270,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             checkBackupStatus();
             // Show AI Scanner notification with a slight delay for better UX
-            setTimeout(checkAIScannerStatus, 1000);
+            // CODEDHOST: AI Scanner promo banner disabled — using Laravel announcements instead. setTimeout(checkAIScannerStatus, 1000);
             // Show .htaccess notification with additional delay for staggered effect
-            setTimeout(checkHtaccessStatus, 1500);
+            // CODEDHOST: .htaccess promo banner disabled — using Laravel announcements instead. setTimeout(checkHtaccessStatus, 1500);
 
             // Set active menu state based on current URL
             setActiveMenuState();
@@ -2398,60 +2400,43 @@
                 .then(r => r.ok ? r.json() : null)
                 .then(d => {
                     if (!d || !Array.isArray(d.announcements) || !d.announcements.length) return;
-                    // Position fixed-top like CP's own banners, stacked BELOW them so we never overlap.
-                    const stack = document.createElement('div');
-                    stack.style.cssText = `position:fixed; left:260px; right:0; z-index:996; padding:8px 30px; display:flex; flex-direction:column; gap:8px;`;
-                    if (window.innerWidth < 769) stack.style.left = '0';
 
-                    // Re-measure CP banners on every animation/mutation for ~3s to catch
-                    // CP's own delayed show() calls (AI scanner banner appears late).
-                    const reposition = () => {
-                        const cpBanners = document.querySelectorAll('.notification-banner.show, .ai-scanner-banner.show');
-                        let topPx = 80;
-                        cpBanners.forEach(b => { topPx += b.offsetHeight + 4; });
-                        stack.style.top = topPx + 'px';
-                        const main = document.getElementById('main-content');
-                        if (main) main.style.paddingTop = (stack.offsetHeight + topPx - 60) + 'px';
-                    };
-                    reposition();
-                    [200, 500, 1000, 2000].forEach(ms => setTimeout(reposition, ms));
-                    window.addEventListener('resize', reposition);
+                    // Inline at the top of #main-content so they flow with the page —
+                    // scroll naturally, never sit over content, no fixed-position math.
+                    const stack = document.createElement('div');
+                    stack.style.cssText = `display:flex; flex-direction:column; gap:10px; margin:0 0 18px;`;
 
                     d.announcements.forEach(a => {
                         const pal = SEVERITY_COLORS[a.severity] || SEVERITY_COLORS.info;
                         const card = document.createElement('div');
-                        card.style.cssText = `background:${pal.bg}; color:white; padding:14px 16px; border-radius:10px; display:flex; align-items:flex-start; gap:12px; box-shadow:0 4px 14px rgba(0,0,0,0.15);`;
+                        card.style.cssText = `background:${pal.bg}; color:white; padding:12px 14px; border-radius:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; box-shadow:0 2px 8px rgba(0,0,0,0.10);`;
                         const ctaHtml = (a.cta_label && a.cta_url)
-                            ? `<a href="${esc(a.cta_url)}" target="_blank" rel="noopener" style="background:rgba(255,255,255,0.18); color:white; text-decoration:none; padding:6px 14px; border-radius:6px; font-weight:600; font-size:12px; flex-shrink:0; transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">${esc(a.cta_label)} →</a>`
+                            ? `<a href="${esc(a.cta_url)}" target="_blank" rel="noopener" style="background:rgba(255,255,255,0.2); color:white; text-decoration:none; padding:7px 14px; border-radius:6px; font-weight:600; font-size:12px; white-space:nowrap; transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">${esc(a.cta_label)} →</a>`
                             : '';
                         card.innerHTML = `
-                            <div style="font-size:18px; flex-shrink:0;"><i class="fas ${pal.icon}"></i></div>
-                            <div style="flex:1; min-width:0;">
-                                <div style="font-weight:700; font-size:14px; margin-bottom:2px;">${esc(a.title)}</div>
-                                <div style="font-size:13px; opacity:0.95; line-height:1.45;">${esc(a.body)}</div>
+                            <div style="font-size:18px; flex-shrink:0; line-height:1;"><i class="fas ${pal.icon}"></i></div>
+                            <div style="flex:1; min-width:200px;">
+                                <div style="font-weight:700; font-size:13px; margin-bottom:2px;">${esc(a.title)}</div>
+                                <div style="font-size:12.5px; opacity:0.95; line-height:1.45;">${esc(a.body)}</div>
                             </div>
                             ${ctaHtml}
-                            <button type="button" data-id="${a.id}" style="background:transparent; border:0; color:white; opacity:0.7; cursor:pointer; padding:4px 6px; font-size:14px;" title="Dismiss">
+                            <button type="button" data-id="${a.id}" style="background:transparent; border:0; color:white; opacity:0.7; cursor:pointer; padding:2px 6px; font-size:14px; flex-shrink:0;" title="Dismiss">
                                 <i class="fas fa-times"></i>
                             </button>`;
-                        const btn = card.querySelector('button');
-                        btn.addEventListener('click', () => {
-                            card.style.transition = 'opacity .2s, max-height .2s';
+                        card.querySelector('button').addEventListener('click', () => {
+                            card.style.transition = 'opacity .2s';
                             card.style.opacity = '0';
-                            card.style.maxHeight = '0';
                             const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
                             fetch(`/backup/cdh/announcements/${a.id}/dismiss`, {
-                                method: 'POST',
-                                credentials: 'same-origin',
+                                method: 'POST', credentials: 'same-origin',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf ? decodeURIComponent(csrf) : '' },
                             }).finally(() => setTimeout(() => card.remove(), 220));
                         });
                         stack.appendChild(card);
                     });
-                    document.body.appendChild(stack);
-                    // Push #main-content down so banners don't sit over content.
-                    const main = document.getElementById('main-content');
-                    if (main) main.style.paddingTop = (stack.offsetHeight + topPx - 60) + 'px';
+
+                    const main = document.getElementById('main-content') || document.body;
+                    main.insertBefore(stack, main.firstChild);
                 })
                 .catch(() => { /* silent */ });
         })();
