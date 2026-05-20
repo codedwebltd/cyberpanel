@@ -7368,17 +7368,18 @@ StrictHostKeyChecking no
             checker = 0
 
             for items in data:
-                if items.find("ssh-rsa") > -1:
-                    keydata = items.split(" ")
+                keydata = items.strip().split(" ")
+
+                if keydata[0] in ("ssh-rsa", "ssh-ed25519", "ssh-dss") or keydata[0].startswith("ecdsa-"):
 
                     try:
-                        key = "ssh-rsa " + keydata[1][:50] + "  ..  " + keydata[2]
+                        key = keydata[0] + " " + keydata[1][:50] + "  ..  " + keydata[2]
                         try:
                             userName = keydata[2][:keydata[2].index("@")]
                         except:
                             userName = keydata[2]
                     except:
-                        key = "ssh-rsa " + keydata[1][:50]
+                        key = keydata[0] + " " + keydata[1][:50]
                         userName = ''
 
                     dic = {'userName': userName,

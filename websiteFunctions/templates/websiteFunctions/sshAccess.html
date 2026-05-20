@@ -54,10 +54,32 @@
         /* Container Styling */
         .container {
             max-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
             background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        /* Keep everything inside the box: no element may push the panel sideways */
+        .container *,
+        .container *::before,
+        .container *::after {
+            box-sizing: border-box;
+        }
+        .container .panel,
+        .container .panel-body,
+        .container .example-box-wrapper,
+        .container form {
+            max-width: 100%;
+        }
+        /* Long SSH keys / code wrap instead of stretching the layout */
+        .container code {
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-wrap: anywhere;
         }
         
         /* Page Title Section */
@@ -160,7 +182,7 @@
         }
         
         .form-group:hover {
-            transform: translateX(5px);
+            /* no horizontal transform: prevented rows drifting to the edge */
         }
         
         .control-label {
@@ -465,7 +487,34 @@
             height: 20px;
             vertical-align: middle;
         }
-        
+
+        /* Form rows: flex layout so label + field align and wrap (no float overlap) */
+        .form-horizontal .form-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .form-horizontal .form-group > .control-label {
+            flex: 0 0 220px;
+            max-width: 220px;
+            float: none;
+            width: auto;
+            margin-bottom: 0;
+        }
+        .form-horizontal .form-group > div[class^="col-"],
+        .form-horizontal .form-group > div[class*=" col-"] {
+            flex: 1 1 320px;
+            float: none;
+            width: auto;
+            max-width: 100%;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -495,6 +544,17 @@
             
             .terminal-btn-wrapper {
                 margin-top: 20px;
+            }
+
+            .form-horizontal .form-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .form-horizontal .form-group > .control-label,
+            .form-horizontal .form-group > div[class^="col-"],
+            .form-horizontal .form-group > div[class*=" col-"] {
+                flex: 1 1 100%;
+                max-width: 100%;
             }
         }
     </style>
