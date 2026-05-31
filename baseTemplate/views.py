@@ -675,6 +675,23 @@ def getCPULoadGraph(request):
     except Exception as e:
         return HttpResponse(json.dumps({'status': 0, 'error_message': str(e)}), content_type='application/json')
 
+def _ssh_allowed_users(user_id, currentACL):
+    """None => admin: sees every login on the box. Otherwise returns the set of
+    Linux system users (website externalApp) this panel user owns -- including
+    those of any resellers/admins created under them -- so a non-admin only ever
+    sees their OWN ssh / login activity, never another tenant's."""
+    if currentACL.get('admin', 0):
+        return None
+    try:
+        admin = Administrator.objects.get(pk=user_id)
+    except Exception:
+        return set()
+    websites = admin.websites_set.all()
+    for child in Administrator.objects.filter(owner=admin.pk):
+        websites = websites | child.websites_set.all()
+    return {w.externalApp for w in websites if w.externalApp}
+
+
 @csrf_exempt
 @require_GET
 def getRecentSSHLogins(request):
@@ -683,15 +700,19 @@ def getRecentSSHLogins(request):
         if not user_id:
             return HttpResponse(json.dumps({'error': 'Not logged in'}), content_type='application/json', status=403)
         currentACL = ACLManager.loadedACL(user_id)
-        if not currentACL.get('admin', 0):
-            return HttpResponse(json.dumps({'error': 'Admin only'}), content_type='application/json', status=403)
+        allowed = _ssh_allowed_users(user_id, currentACL)
+        # `last` truncates the username column (e.g. coded9329 -> coded932), so
+        # match against both the full name and its 8-char truncation.
+        allowed_trunc = None if allowed is None else {u[:8] for u in allowed}
 
         import re, time
         from collections import OrderedDict
 
-        # Run 'last -n 20' to get recent SSH logins
+        # Admins read the whole box (last -n 20); a scoped user needs a deeper
+        # scan since their own lines are sparse among every other tenant's.
+        last_count = 20 if allowed is None else 400
         try:
-            output = ProcessUtilities.outputExecutioner('last -n 20')
+            output = ProcessUtilities.outputExecutioner('last -n %d' % last_count)
         except Exception as e:
             return HttpResponse(json.dumps({'error': 'Failed to run last: %s' % str(e)}), content_type='application/json', status=500)
 
@@ -707,6 +728,9 @@ def getRecentSSHLogins(request):
             if len(parts) < 5:
                 continue
             user, tty, ip, *rest = parts
+            # Scope to the tenant's own system users (admins skip this).
+            if allowed is not None and user not in allowed and user not in allowed_trunc:
+                continue
             # Find date/time and session info
             date_session = rest[-1] if rest else ''
             # Try to extract date/session
@@ -742,6 +766,8 @@ def getRecentSSHLogins(request):
                 'session': session_info,
                 'raw': line
             })
+            if len(logins) >= 20:
+                break
         return HttpResponse(json.dumps({'logins': logins}), content_type='application/json')
     except Exception as e:
         return HttpResponse(json.dumps({'error': str(e)}), content_type='application/json', status=500)
@@ -754,22 +780,33 @@ def getRecentSSHLogs(request):
         if not user_id:
             return HttpResponse(json.dumps({'error': 'Not logged in'}), content_type='application/json', status=403)
         currentACL = ACLManager.loadedACL(user_id)
-        if not currentACL.get('admin', 0):
-            return HttpResponse(json.dumps({'error': 'Admin only'}), content_type='application/json', status=403)
+        allowed = _ssh_allowed_users(user_id, currentACL)
+        import re as _re
         from plogical.processUtilities import ProcessUtilities
         distro = ProcessUtilities.decideDistro()
         if distro in [ProcessUtilities.ubuntu, ProcessUtilities.ubuntu20]:
             log_path = '/var/log/auth.log'
         else:
             log_path = '/var/log/secure'
+        # Admin reads the tail as-is; a scoped user needs a deeper read since we
+        # only keep lines naming one of their own system users.
+        tail_n = 100 if allowed is None else 2000
         try:
-            output = ProcessUtilities.outputExecutioner(f'tail -n 100 {log_path}')
+            output = ProcessUtilities.outputExecutioner(f'tail -n {tail_n} {log_path}')
         except Exception as e:
             return HttpResponse(json.dumps({'error': f'Failed to read log: {str(e)}'}), content_type='application/json', status=500)
+        user_re = None
+        if allowed is not None:
+            if not allowed:
+                return HttpResponse(json.dumps({'logs': []}), content_type='application/json')
+            user_re = _re.compile(r'\b(?:' + '|'.join(_re.escape(u) for u in allowed) + r')\b')
         lines = output.split('\n')
         logs = []
         for line in lines:
             if not line.strip():
+                continue
+            # Scope to the tenant's own system users (admins skip this).
+            if user_re is not None and not user_re.search(line):
                 continue
             parts = line.split()
             if len(parts) > 4:
@@ -779,6 +816,8 @@ def getRecentSSHLogs(request):
                 timestamp = ''
                 message = line
             logs.append({'timestamp': timestamp, 'message': message, 'raw': line})
+            if len(logs) >= 100:
+                break
         return HttpResponse(json.dumps({'logs': logs}), content_type='application/json')
     except Exception as e:
         return HttpResponse(json.dumps({'error': str(e)}), content_type='application/json', status=500)
@@ -1246,14 +1285,21 @@ def getSSHUserActivity(request):
         if not user_id:
             return HttpResponse(json.dumps({'error': 'Not logged in'}), content_type='application/json', status=403)
         currentACL = ACLManager.loadedACL(user_id)
-        if not currentACL.get('admin', 0):
-            return HttpResponse(json.dumps({'error': 'Admin only'}), content_type='application/json', status=403)
+        allowed = _ssh_allowed_users(user_id, currentACL)
         data = json.loads(request.body.decode('utf-8'))
         user = data.get('user')
         tty = data.get('tty')
         login_ip = data.get('ip', '')
         if not user:
             return HttpResponse(json.dumps({'error': 'Missing user'}), content_type='application/json', status=400)
+        # Non-admins may only inspect their OWN system users. The name coming
+        # from the table may be `last`-truncated (coded932), so match against the
+        # truncation and resolve back to the real username for the ps lookup.
+        if allowed is not None:
+            match = next((u for u in allowed if u == user or u[:8] == user), None)
+            if not match:
+                return HttpResponse(json.dumps({'error': 'Not permitted for this user'}), content_type='application/json', status=403)
+            user = match
         # Get processes for the user
         ps_cmd = f"ps -u {user} -o pid,ppid,tty,time,cmd --no-headers"
         try:

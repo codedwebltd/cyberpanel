@@ -224,8 +224,13 @@
     
     .tab-content {
         display: none;
+        /* The SSH tables have fixed column min-widths (~690px total); without a
+           horizontal scroll container they spill outside the widget on mobile. */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
     }
-    
+
     .tab-content.active {
         display: block;
     }
@@ -624,7 +629,21 @@
         .activity-table td {
             padding: 8px;
         }
-        
+
+        /* Relax the desktop min-widths on mobile so the table is compact; what
+           still doesn't fit scrolls inside .tab-content rather than overflowing. */
+        .activity-table td:nth-child(4),
+        .activity-table td:nth-child(5) {
+            white-space: normal;
+            min-width: 0;
+        }
+        .ssh-logs-table th:nth-child(1),
+        .ssh-logs-table td:nth-child(1),
+        .ssh-logs-table th:nth-child(2),
+        .ssh-logs-table td:nth-child(2) {
+            min-width: 0;
+        }
+
         .view-activity-btn {
             font-size: 12px;
             padding: 4px 12px;

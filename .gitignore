@@ -143,3 +143,8 @@ RESOURCE_LIMITS_IMPLEMENTATION.md
 
 # snappymail bootstrap helper (not part of upstream tree)
 snappymail_cyberpanel.php
+
+# Codedhost local additions
+terminal_jwt_secret
+*.preupstream-*
+/static/
