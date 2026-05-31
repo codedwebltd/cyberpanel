@@ -10948,7 +10948,7 @@ app.controller('websitePages', function ($scope, $http, $timeout, $window) {
                 var token = response.data.token;
                 var ssh_user = response.data.ssh_user;
                 var wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-                var wsUrl = wsProto + '://' + window.location.hostname + ':8888/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
+                var wsUrl = wsProto + '://' + window.location.hostname + ':2087/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
                 console.log('[DEBUG] Connecting to WebSocket:', wsUrl);
                 var socket = new WebSocket(wsUrl);
                 socket.binaryType = 'arraybuffer';
@@ -15609,7 +15609,7 @@ app.controller('sshAccess', function ($scope, $http, $timeout) {
                 var token = response.data.token;
                 var ssh_user = $("#externalApp").text();
                 var wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-                var wsUrl = wsProto + '://' + window.location.hostname + ':8888/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
+                var wsUrl = wsProto + '://' + window.location.hostname + ':2087/ws?token=' + encodeURIComponent(token) + '&ssh_user=' + encodeURIComponent(ssh_user);
                 var socket = new WebSocket(wsUrl);
                 socket.binaryType = 'arraybuffer';
                 $scope.terminalSocket = socket;
